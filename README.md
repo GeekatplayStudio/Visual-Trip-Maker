@@ -11,7 +11,7 @@ By **Geekatplay Studio** · Vladimir Chopine
 ## Features
 
 - **Draw routes your way.** Click to place points, drag to adjust, or import a GPX or KML track. Each leg can follow real roads, a smooth curve, straight lines or a flight arc.
-- **Change transport along the trip.** One continuous route made of legs: drive to the airport, fly, take a taxi, board a train. Pick the next transport while drawing, or split a leg from any point. The video pauses at each change while the camera glides to the new framing.
+- **Change transport along the trip.** One continuous route made of legs: drive to the airport, fly, take a taxi, board a train. Pick the next transport while drawing, or split a leg from any point. The video pauses at each change while the camera glides to the new framing. Reorder legs to change the order of the stops (A → B → C becomes A → C → B) and the route reconnects on the map.
 - **Shortest flight paths.** Great-circle arcs that take the short way round the globe, including across the date line.
 - **15 transports.** Car, 4x4, camper, bus, motorcycle, bicycle, on foot, two trains, two planes, helicopter, balloon, boat and ferry, each with shaded symbols, shadows and motion trails (contrails, wakes, smoke, dust).
 - **Markers and story cards.** Pins, flags, dots, polaroid photos and text, 25 icons, any colour. Pop in on arrival, pause the animation, show a card with title, subtitle, description and photo.
@@ -36,6 +36,8 @@ By **Geekatplay Studio** · Vladimir Chopine
 | **Map styles, terrain and symbols.** | **Vertical 9:16** for Reels, Shorts and TikTok. |
 | ![Export](docs/screenshots/08-export.jpg) | ![Flight arc](docs/screenshots/10-flight-arc.jpg) |
 | **Export** up to 4K, with optional sound. | **Shortest flight path** across the Pacific. |
+| ![Photo and description](docs/screenshots/11-photo-description.jpg) | |
+| **Photos and descriptions.** Upload and frame a photo; suggest a short description of the place in one click. | |
 
 ## Quick start
 

@@ -136,6 +136,8 @@ Press **Add marker** (or `M`) and click on the route. Select a marker in the Mar
 | **Photo** | Optional. **Upload photo** (or drop or paste an image), or use a photo address. Phone photos are turned upright and resized automatically. **Frame** opens an editor: drag to choose what shows, zoom with the slider or the mouse wheel, and see the result on the story card and the polaroid marker. |
 | **Description** | Optional, up to 300 characters, shown on the story card. **Suggest description** looks the place up on Wikipedia and Wikivoyage from the marker's title and position (a misspelled name still works) and picks one or two of the most interesting sentences. **Another** cycles through other suggestions, **Use its photo** takes the article's photo, and the link shows the source. You can edit the text freely. |
 
+![Photo and description](screenshots/11-photo-description.jpg)
+
 Drag a marker to move it. Markers placed away from the line trigger at the nearest point of the line. **Marker size** and **Labels next to markers** are at the bottom of the Markers tab.
 
 ## 6. Camera
