@@ -381,6 +381,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     // 3. OVERLAND 4X4 SUV / EXPEDITION JEEP
     // -----------------------------------------------------------
     case 'suv':
+    case 'bus':
     case 'camper': {
       particleSystem = new VehicleParticleSystem(0xd97706, 0.35, 2.0); // Desert trail dust
       rootGroup.add(particleSystem.group);

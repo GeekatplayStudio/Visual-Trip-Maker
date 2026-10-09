@@ -23,7 +23,10 @@ function loadSavedProject(): RouteProject | null {
     if (!raw) return null;
     const p = JSON.parse(raw) as RouteProject;
     if (!p || !Array.isArray(p.segments) || !Array.isArray(p.waypoints) || !p.camera) return null;
-    return { ...PRESET_PROJECTS.european_voyage, ...p, camera: { ...DEFAULT_CAMERA, ...p.camera } };
+    const legacyTiers = JSON.stringify({ airplane: 'widest', propeller: 'wider', helicopter: 'wider', balloon: 'wider', hiker: 'closer', bicycle: 'closer' });
+    const camera = { ...DEFAULT_CAMERA, ...p.camera };
+    if (JSON.stringify(camera.zoomPerTransport) === legacyTiers) camera.zoomPerTransport = {};
+    return { ...PRESET_PROJECTS.european_voyage, ...p, camera };
   } catch {
     return null;
   }

@@ -143,8 +143,8 @@ The camera has three modes.
 
 The camera stays with the symbol. Settings:
 
-- **Zoom**: *Auto* picks a zoom that suits the size of your route; or set it yourself, or click **Use the map's zoom** to copy what you see.
-- **Zoom per transport**: *Closer, Same, Wider, Widest* compared with the main zoom. Frame a flight wider than a drive, and a walk closer.
+- **Zoom**: *Auto* frames every leg on its own, from the transport, its speed and the length of the leg: walking is filmed very close, cars and buses a little further out, trains and boats wider and flights wide. Fast legs in a short video are framed a bit wider so the map does not rush past. Or set a fixed zoom yourself, or click **Use the map's zoom** to copy what you see.
+- **Zoom per transport**: *Closer, Same, Wider, Widest* fine-tunes the framing of each transport.
 - **Pause at transport changes**: how long the line waits while the camera glides between framings.
 - **Start and end**: *Whole route* opens on the full trip and zooms in, or pulls back to the full trip at the end. *Close* starts and ends on the symbol.
 - **Which way is up**: *North up* (the map stays still), *Direction of travel* (the map rotates so you always travel up) or *Fixed angle*.
@@ -253,7 +253,7 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 
 - **Pick the map to suit the trip.** Light and dark maps make the line stand out; satellite with 3D terrain and a tilt of 45° or more suits mountains.
 - **Let the camera breathe.** *Very smooth* steadiness and a little *Look ahead* look the most cinematic.
-- **Wide for flights.** Set *Zoom per transport* to *Widest* for planes so a long flight is readable.
+- **Closer or wider.** If a leg feels too far or too close, nudge its transport with *Zoom per transport*. A longer *Travel time* also lets road legs stay closer.
 - **Short and punchy.** For social media use 9:16, 10 to 20 seconds of travel time and pauses of 1 to 2 seconds.
 - **Add a marker at every transport change** (an airport, a harbour, a station) with a 1.5 to 2 second pause and a story card. It gives the viewer time to understand the change.
 - **Draw coarse, then refine.** Place a few points, then drag them. Roads and curves do the rest.

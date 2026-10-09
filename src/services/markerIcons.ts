@@ -42,6 +42,7 @@ export const VEHICLE_GLYPHS: Record<TransportMode, string> = {
   sports_car: '🏎️',
   suv: '🚙',
   camper: '🚐',
+  bus: '🚌',
   bullet_train: '🚄',
   steam_train: '🚂',
   motorcycle: '🏍️',
@@ -485,6 +486,24 @@ export function renderVehicleSprite(mode: TransportMode, color: string, pr = 2):
       }
       break;
     }
+    case 'bus': {
+      const len = 54;
+      wheels(ctx, 22, len, [5, 10]);
+      outlined(ctx, () => rr(ctx, -11, -len / 2, 22, len, 4), color);
+      // windscreen at the front, roof hatch and side window strips
+      glass(ctx, -8.5, -len / 2 + 3, 17, 6);
+      ctx.fillStyle = light;
+      rr(ctx, -6, -6, 12, 7, 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(15,23,42,0.45)';
+      for (let y = -len / 2 + 12; y < len / 2 - 4; y += 6) {
+        rr(ctx, -10, y, 2.2, 4.2, 1);
+        ctx.fill();
+        rr(ctx, 7.8, y, 2.2, 4.2, 1);
+        ctx.fill();
+      }
+      break;
+    }
     case 'motorcycle': {
       ctx.fillStyle = '#111827';
       rr(ctx, -2.5, -19, 5, 10, 2);
@@ -752,6 +771,7 @@ export const SPRITE_LENGTH_PX: Record<TransportMode, number> = {
   sports_car: 40,
   suv: 42,
   camper: 46,
+  bus: 54,
   bullet_train: 56,
   steam_train: 56,
   motorcycle: 38,

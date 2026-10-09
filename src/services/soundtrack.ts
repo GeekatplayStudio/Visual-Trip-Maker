@@ -27,6 +27,7 @@ const VOICES: Record<TransportMode, Voice> = {
   sports_car: { pitch: 95, tone: 0.5, rumble: 0.55, gain: 0.45, wobble: 0 },
   suv: { pitch: 70, tone: 0.45, rumble: 0.7, gain: 0.45, wobble: 0 },
   camper: { pitch: 60, tone: 0.45, rumble: 0.75, gain: 0.42, wobble: 0 },
+  bus: { pitch: 52, tone: 0.45, rumble: 0.8, gain: 0.45, wobble: 0 },
   motorcycle: { pitch: 130, tone: 0.65, rumble: 0.4, gain: 0.45, wobble: 0 },
   bicycle: { pitch: 0, tone: 0, rumble: 0.2, gain: 0.12, wobble: 4 },
   hiker: { pitch: 0, tone: 0, rumble: 0.3, gain: 0.1, wobble: 2 },

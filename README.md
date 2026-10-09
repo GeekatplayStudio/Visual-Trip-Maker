@@ -13,9 +13,9 @@ By **Geekatplay Studio** · Vladimir Chopine
 - **Draw routes your way.** Click to place points, drag to adjust, or import a GPX or KML track. Each leg can follow real roads, a smooth curve, straight lines or a flight arc.
 - **Change transport along the trip.** One continuous route made of legs: drive to the airport, fly, take a taxi, board a train. Pick the next transport while drawing, or split a leg from any point. The video pauses at each change while the camera glides to the new framing.
 - **Shortest flight paths.** Great-circle arcs that take the short way round the globe, including across the date line.
-- **14 transports.** Car, 4x4, camper, motorcycle, bicycle, on foot, two trains, two planes, helicopter, balloon, boat and ferry, each with shaded symbols, shadows and motion trails (contrails, wakes, smoke, dust).
+- **15 transports.** Car, 4x4, camper, bus, motorcycle, bicycle, on foot, two trains, two planes, helicopter, balloon, boat and ferry, each with shaded symbols, shadows and motion trails (contrails, wakes, smoke, dust).
 - **Markers and story cards.** Pins, flags, dots, polaroid photos and text, 25 icons, any colour. Pop in on arrival, pause the animation, show a card with title, subtitle and photo.
-- **Camera director.** Follow the line (zoom per transport, look-ahead, steadiness, tilt, north-up or direction of travel), glide between two saved shots, or hold a fixed view. Intro zoom-in and outro pull-back included.
+- **Camera director.** Follow the line with automatic per-leg framing (walking close, driving a little out, flying wide), zoom per transport, look-ahead, steadiness, tilt, north-up or direction of travel), glide between two saved shots, or hold a fixed view. Intro zoom-in and outro pull-back included.
 - **Maps that look good.** Crisp vector basemaps (light, dark, streets, bright, fiord, treasure map), satellite and topographic, with optional 3D terrain and hillshade. No API keys needed.
 - **Sound.** A synthesised engine or wind bed per transport, a whoosh at every transport change and a chime at every stop, optionally mixed into the exported video.
 - **Frame-exact export.** H.264 MP4 at 720p to 4K, in landscape, vertical or square, at 24, 30 or 60 fps. Every frame is rendered and encoded on your machine, so the result never depends on how fast your computer is.

@@ -4,6 +4,7 @@ export type TransportMode =
   | 'sports_car'
   | 'suv'
   | 'camper'
+  | 'bus'
   | 'bullet_train'
   | 'steam_train'
   | 'motorcycle'

@@ -2,7 +2,7 @@ import React from 'react';
 import { Camera, Loader2, MapPin, Mountain, Palette, PenLine, Plus, Route, Trash2, Crosshair, ChevronUp, ChevronDown } from 'lucide-react';
 import type { CameraMovement, CameraSettings, CameraShot, EditTool, LineStyle, MarkerStyle, RouteProject, RouteSegment, RoutingMode, Steadiness, TransportMode, Waypoint, ZoomTier } from '../types';
 import { TRANSPORT_OPTIONS } from '../services/presets';
-import { MOVEMENT_INFO } from '../services/cameraDirector';
+import { MOVEMENT_INFO, legViewKm } from '../services/cameraDirector';
 import { THEMES } from '../services/mapStyles';
 import { MARKER_COLORS, MARKER_ICONS, iconGlyph } from '../services/markerIcons';
 import { FLYING_MODES, rebuildSegment, timelineLayout, type RouteModel } from '../services/geoUtils';
@@ -388,6 +388,7 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                     </div>
                     <input type="range" min={3} max={16} step={0.1} value={cam.zoomAuto ? 9 : cam.zoom} onChange={(e) => onUpdateCamera({ zoom: Number(e.target.value), zoomAuto: false })} className="w-full" />
                     <div className="flex justify-between text-[10px] text-slate-500 mt-0.5"><span>Wide</span><span>Close</span></div>
+                    {cam.zoomAuto && <p className="text-[10px] text-slate-500 mt-1.5">Auto frames every leg on its own: walking very close, road vehicles a little further out, trains and boats wider, flights wide. Fast legs in a short video are framed a bit wider so the map does not rush past.</p>}
                     <div className="flex gap-1.5 mt-2">
                       <button onClick={() => onUpdateCamera({ zoomAuto: true })} className={`chip flex-1 ${cam.zoomAuto ? 'chip-on' : ''}`}>Auto</button>
                       <button onClick={onUseCurrentZoom} className="chip flex-1">Use the map's zoom</button>
@@ -400,9 +401,15 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                         {usedTransports.map((mode) => {
                           const info = TRANSPORT_OPTIONS.find((o) => o.mode === mode);
                           const tier = cam.zoomPerTransport[mode] || 'same';
+                          const views = project.segments.map((sg, i) => (sg.transportMode === mode && model.segments[i]?.durationSec > 0 ? legViewKm(project, model, i) : null)).filter((v): v is number => v !== null);
+                          const fmtKm = (km: number) => (km < 10 ? km.toFixed(1) : Math.round(km).toString());
+                          const autoText = cam.zoomAuto && views.length ? `≈ ${fmtKm(Math.min(...views))}${views.length > 1 && Math.max(...views) - Math.min(...views) > 0.5 ? `–${fmtKm(Math.max(...views))}` : ''} km` : '';
                           return (
                             <div key={mode} className="flex items-center gap-2">
-                              <span className="w-24 text-[11px] text-slate-300 truncate">{info?.glyph} {info?.label}</span>
+                              <span className="w-24 text-[11px] text-slate-300 truncate leading-tight" title={autoText ? `Auto framing: ${autoText} across the frame` : undefined}>
+                                {info?.glyph} {info?.label}
+                                {autoText && <span className="block text-[9px] text-slate-500 font-mono">{autoText}</span>}
+                              </span>
                               <div className="flex-1 grid grid-cols-4 gap-1">
                                 {(['closer', 'same', 'wider', 'widest'] as ZoomTier[]).map((z) => (
                                   <button key={z} onClick={() => onUpdateCamera({ zoomPerTransport: { ...cam.zoomPerTransport, [mode]: z } })} className={`chip !px-1 capitalize ${tier === z ? 'chip-on' : ''}`}>{z}</button>
@@ -412,7 +419,7 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                           );
                         })}
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-1.5">Compared with Zoom. The line pauses where the transport changes while the camera glides in or out.</p>
+                      <p className="text-[10px] text-slate-500 mt-1.5">Fine-tunes the framing of each transport. The line pauses where the transport changes while the camera glides in or out.</p>
                     </div>
                   )}
                   <Slider label="Pause at transport changes" value={cam.transitionSeconds} min={0} max={3} step={0.1} onChange={(v) => onUpdateCamera({ transitionSeconds: v })} format={(v) => (v ? `${v.toFixed(1)}s` : 'none')} />

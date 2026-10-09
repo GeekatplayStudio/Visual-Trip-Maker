@@ -86,7 +86,7 @@ const TRANSPORT: Record<string, TransportMode> = {
   caravan: 'camper',
   motorhome: 'camper',
   'motor-home': 'camper',
-  bus: 'camper',
+  bus: 'bus',
   truck: 'camper',
   'tuk-tuk': 'suv',
   tuktuk: 'suv',

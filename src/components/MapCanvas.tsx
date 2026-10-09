@@ -95,6 +95,7 @@ const VEHICLE_PX: Record<TransportMode, number> = {
   sports_car: 46,
   suv: 48,
   camper: 50,
+  bus: 58,
   bullet_train: 86,
   steam_train: 70,
   motorcycle: 40,

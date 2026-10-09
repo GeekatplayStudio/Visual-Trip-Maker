@@ -15,7 +15,7 @@ export const END_HOLD_SECONDS = 0.8;
 
 export const FLYING_MODES: TransportMode[] = ['airplane', 'propeller', 'helicopter', 'balloon'];
 export const WATER_MODES: TransportMode[] = ['yacht', 'ferry'];
-export const ROAD_MODES: TransportMode[] = ['sports_car', 'suv', 'camper', 'motorcycle', 'bicycle', 'hiker'];
+export const ROAD_MODES: TransportMode[] = ['sports_car', 'suv', 'camper', 'bus', 'motorcycle', 'bicycle', 'hiker'];
 
 // ---------------------------------------------------------------------------
 // Geometry helpers
