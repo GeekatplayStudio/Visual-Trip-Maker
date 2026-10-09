@@ -150,21 +150,45 @@ export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime:
               <>Prepare map</>
             )}
           </button>
-          <label className="flex items-center gap-2 text-slate-400">
-            Travel time
-            <input type="range" min={4} max={90} step={1} value={project.durationSeconds} onChange={(e) => onUpdateProject((p) => ({ ...p, durationSeconds: Number(e.target.value) }))} className="w-32" />
-            <input
-              type="number"
-              min={2}
-              max={600}
-              value={project.durationSeconds}
-              onChange={(e) => onUpdateProject((p) => ({ ...p, durationSeconds: Math.max(2, Math.min(600, Number(e.target.value) || 2)) }))}
-              className="w-14 bg-white/[0.04] border border-white/10 rounded-md px-1.5 py-1 text-white font-mono text-xs text-right"
-            />
-            s
-          </label>
+          <div className="flex items-center bg-white/[0.03] p-0.5 rounded-lg border border-white/10" title="Auto: the video length follows from the pace, so every vehicle moves at a comfortable speed. Fixed: you set the travel time.">
+            {(['auto', 'fixed'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => onUpdateProject((p) => ({ ...p, lengthMode: m, durationSeconds: m === 'fixed' && p.lengthMode !== 'fixed' ? Math.round(model.travelSeconds) : p.durationSeconds }))}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold ${project.lengthMode === m ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}
+              >
+                {m === 'auto' ? 'Auto length' : 'Fixed length'}
+              </button>
+            ))}
+          </div>
+          {project.lengthMode === 'fixed' ? (
+            <label className="flex items-center gap-2 text-slate-400">
+              Travel time
+              <input type="range" min={4} max={180} step={1} value={project.durationSeconds} onChange={(e) => onUpdateProject((p) => ({ ...p, durationSeconds: Number(e.target.value) }))} className="w-28" />
+              <input
+                type="number"
+                min={2}
+                max={600}
+                value={project.durationSeconds}
+                onChange={(e) => onUpdateProject((p) => ({ ...p, durationSeconds: Math.max(2, Math.min(600, Number(e.target.value) || 2)) }))}
+                className="w-14 bg-white/[0.04] border border-white/10 rounded-md px-1.5 py-1 text-white font-mono text-xs text-right"
+              />
+              s
+            </label>
+          ) : (
+            <div className="flex items-center gap-2 text-slate-400">
+              Pace
+              <div className="flex items-center bg-white/[0.03] p-0.5 rounded-lg border border-white/10">
+                {(['slow', 'normal', 'fast'] as const).map((pc) => (
+                  <button key={pc} onClick={() => onUpdateProject((p) => ({ ...p, pace: pc }))} className={`px-2 py-1 rounded-md text-[11px] font-semibold capitalize ${project.pace === pc ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>
+                    {pc}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <span className="text-slate-500 hidden md:inline">
-            + {model.totalDwellSeconds.toFixed(1)}s pauses{extras > 0 ? ` + ${extras.toFixed(1)}s start/end` : ''} = <b className="text-slate-300">{total.toFixed(1)}s</b>
+            {model.travelSeconds.toFixed(1)}s travel + {model.totalDwellSeconds.toFixed(1)}s pauses{extras > 0 ? ` + ${extras.toFixed(1)}s start/end` : ''} = <b className="text-slate-300">{total.toFixed(1)}s</b>
           </span>
           <div className="flex items-center bg-white/[0.03] p-0.5 rounded-lg border border-white/10">
             {[0.5, 1, 2].map((s) => (

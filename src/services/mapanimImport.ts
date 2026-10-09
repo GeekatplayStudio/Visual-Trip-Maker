@@ -303,6 +303,8 @@ export function importMapanim(file: MAFile, sceneIndex = 0): ImportResult {
     showMapLabels: scene.mapLabels !== false,
     vehicleStyle: scene.symbols3d ? 'icon' : 'icon',
     aspectRatio: file.project.aspect === '9:16' ? '9:16' : file.project.aspect === '1:1' ? '1:1' : '16:9',
+    lengthMode: 'auto',
+    pace: speed > 0.25 ? 'fast' : speed < 0.12 ? 'slow' : 'normal',
     durationSeconds,
   };
   return { project, sceneCount: scenes.length, sceneName: scene.name || `Scene ${sceneIndex + 1}` };

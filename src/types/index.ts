@@ -159,7 +159,11 @@ export interface RouteProject {
 
   // Playback
   aspectRatio: AspectRatio;
-  durationSeconds: number; // travel time, excluding dwell pauses and intro/outro
+  /** 'auto': the travel time follows from the pace; 'fixed': durationSeconds is used. */
+  lengthMode: 'auto' | 'fixed';
+  /** On-screen pace of the moving symbol in auto mode. */
+  pace: 'slow' | 'normal' | 'fast';
+  durationSeconds: number; // travel time in fixed mode, excluding pauses and intro/outro
   playbackSpeed: number;
   loop: boolean;
   soundEnabled: boolean;
@@ -189,7 +193,10 @@ export interface VehicleTelemetry {
   speedKmh: number;
   /** 0..1 fraction of the total distance covered. */
   progress01: number;
+  /** Rounded for display. */
   distanceCoveredKm: number;
+  /** Exact distance along the route (km). */
+  distanceKm: number;
   totalDistanceKm: number;
   currentSegmentIndex: number;
   /** Waypoint currently dwelt at (or just reached). */

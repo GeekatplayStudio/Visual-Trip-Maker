@@ -1,26 +1,27 @@
 import type { CameraSettings, RouteProject, RouteSegment, RoutingMode, TransportMode, Waypoint } from '../types';
 import { buildSegmentGeometry, calculatePathLengthKm, defaultRoutingFor } from './geoUtils';
+import { DEFAULT_SPEED_KMH } from './framing';
 import { themeInfo } from './mapStyles';
 
 let idCounter = 0;
 export const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(idCounter++).toString(36)}`;
 
 export const TRANSPORT_OPTIONS: { mode: TransportMode; label: string; glyph: string; speed: number }[] = [
-  { mode: 'sports_car', label: 'Car', glyph: '🚗', speed: 90 },
-  { mode: 'suv', label: '4x4 / SUV', glyph: '🚙', speed: 70 },
-  { mode: 'camper', label: 'Camper van', glyph: '🚐', speed: 75 },
-  { mode: 'bus', label: 'Bus', glyph: '🚌', speed: 60 },
-  { mode: 'motorcycle', label: 'Motorcycle', glyph: '🏍️', speed: 90 },
-  { mode: 'bicycle', label: 'Bicycle', glyph: '🚴', speed: 20 },
-  { mode: 'hiker', label: 'On foot', glyph: '🥾', speed: 4 },
-  { mode: 'bullet_train', label: 'High-speed train', glyph: '🚄', speed: 250 },
-  { mode: 'steam_train', label: 'Train', glyph: '🚂', speed: 100 },
-  { mode: 'airplane', label: 'Plane', glyph: '✈️', speed: 800 },
-  { mode: 'propeller', label: 'Small plane', glyph: '🛩️', speed: 300 },
-  { mode: 'helicopter', label: 'Helicopter', glyph: '🚁', speed: 200 },
-  { mode: 'balloon', label: 'Balloon', glyph: '🎈', speed: 25 },
-  { mode: 'yacht', label: 'Boat', glyph: '🛥️', speed: 40 },
-  { mode: 'ferry', label: 'Ferry', glyph: '⛴️', speed: 35 },
+  { mode: 'sports_car', label: 'Car', glyph: '🚗', speed: DEFAULT_SPEED_KMH.sports_car },
+  { mode: 'suv', label: '4x4 / SUV', glyph: '🚙', speed: DEFAULT_SPEED_KMH.suv },
+  { mode: 'camper', label: 'Camper van', glyph: '🚐', speed: DEFAULT_SPEED_KMH.camper },
+  { mode: 'bus', label: 'Bus', glyph: '🚌', speed: DEFAULT_SPEED_KMH.bus },
+  { mode: 'motorcycle', label: 'Motorcycle', glyph: '🏍️', speed: DEFAULT_SPEED_KMH.motorcycle },
+  { mode: 'bicycle', label: 'Bicycle', glyph: '🚴', speed: DEFAULT_SPEED_KMH.bicycle },
+  { mode: 'hiker', label: 'On foot', glyph: '🥾', speed: DEFAULT_SPEED_KMH.hiker },
+  { mode: 'bullet_train', label: 'High-speed train', glyph: '🚄', speed: DEFAULT_SPEED_KMH.bullet_train },
+  { mode: 'steam_train', label: 'Train', glyph: '🚂', speed: DEFAULT_SPEED_KMH.steam_train },
+  { mode: 'airplane', label: 'Plane', glyph: '✈️', speed: DEFAULT_SPEED_KMH.airplane },
+  { mode: 'propeller', label: 'Small plane', glyph: '🛩️', speed: DEFAULT_SPEED_KMH.propeller },
+  { mode: 'helicopter', label: 'Helicopter', glyph: '🚁', speed: DEFAULT_SPEED_KMH.helicopter },
+  { mode: 'balloon', label: 'Balloon', glyph: '🎈', speed: DEFAULT_SPEED_KMH.balloon },
+  { mode: 'yacht', label: 'Boat', glyph: '🛥️', speed: DEFAULT_SPEED_KMH.yacht },
+  { mode: 'ferry', label: 'Ferry', glyph: '⛴️', speed: DEFAULT_SPEED_KMH.ferry },
 ];
 
 export const transportInfo = (mode: TransportMode) => TRANSPORT_OPTIONS.find((t) => t.mode === mode) || TRANSPORT_OPTIONS[0];
@@ -99,6 +100,8 @@ export const DEFAULT_SETTINGS: Omit<RouteProject, 'id' | 'name' | 'segments' | '
   showStoryCards: true,
   showHud: false,
   aspectRatio: '16:9',
+  lengthMode: 'auto',
+  pace: 'normal',
   durationSeconds: 16,
   playbackSpeed: 1,
   loop: false,
@@ -126,6 +129,7 @@ export const PRESET_PROJECTS: Record<string, RouteProject> = {
     name: 'Grand European Trip',
     mapTheme: 'parchment',
     camera: { ...DEFAULT_CAMERA, orientation: 'north_up', tilt: 0 },
+    pace: 'fast',
     durationSeconds: 20,
     waypoints: [
       makeWaypoint({ id: 'wp-london', title: 'London', subtitle: 'Departure from Heathrow', lng: -0.4543, lat: 51.47, dwellTime: 1.5, revealMode: 'always', markerStyle: 'flag', icon: 'flag', color: '#0f172a' }),
@@ -151,6 +155,7 @@ export const PRESET_PROJECTS: Record<string, RouteProject> = {
     camera: { ...DEFAULT_CAMERA, orientation: 'heading', tilt: 45, steadiness: 'very_smooth', lookAhead: 2, zoomAuto: false, zoom: 10.5 },
     vehicleStyle: '3d',
     durationSeconds: 18,
+    pace: 'fast',
     waypoints: [
       makeWaypoint({ id: 'wp-sf', title: 'San Francisco', subtitle: 'Golden Gate Bridge', lng: -122.4783, lat: 37.8199, dwellTime: 1.5, revealMode: 'always', markerStyle: 'flag', icon: 'flag', color: '#ffffff', photoUrl: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&auto=format&fit=crop&q=70' }),
       makeWaypoint({ id: 'wp-monterey', title: 'Monterey', subtitle: 'Lunch by the bay', lng: -121.8947, lat: 36.6002, dwellTime: 2, markerStyle: 'pin', icon: 'food', color: '#fbbf24' }),

@@ -195,7 +195,9 @@ Films exactly one saved view. Frame the map and press **Use this view**.
 ## 8. Timeline and preview
 
 - Press **Play** or `Space`. Click or drag on the timeline to scrub. `←` and `→` step one frame, `Shift` with the arrows steps one second.
-- **Travel time** is the time the line takes to travel, without pauses. The total length you see on the right adds marker pauses, transport-change pauses and the start and end moves.
+- **Auto length / Fixed length.** With *Auto length* (the default) every vehicle moves across the frame at the same comfortable pace, whether it is walking, driving or flying, and the length of the video follows from your route. Choose the **Pace**: *Slow*, *Normal* or *Fast*. With *Fixed length* you set the **Travel time** yourself; time is then shared between legs the same way, and a very long leg in a short video is framed wider so it stays readable.
+- A leg's **Speed** in the Route tab makes that leg quicker or slower than normal for its transport. The leg list shows how many seconds each leg takes.
+- The total on the right adds marker pauses, transport-change pauses and the start and end moves to the travel time.
 - **0.5×, 1×, 2×** change only the speed of the preview. They never change the exported video.
 - **Prepare map / Map ready**: a moment after you stop editing, the app quietly loads all map tiles along the camera path, so playback is smooth and the export is faster. The status is shown next to *Travel time*; click it to load the tiles again. It pauses while you play, and the export finishes it before rendering if needed.
 - **Loop** repeats the preview.
@@ -254,8 +256,9 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 
 - **Pick the map to suit the trip.** Light and dark maps make the line stand out; satellite with 3D terrain and a tilt of 45° or more suits mountains.
 - **Let the camera breathe.** *Very smooth* steadiness and a little *Look ahead* look the most cinematic.
-- **Closer or wider.** If a leg feels too far or too close, nudge its transport with *Zoom per transport*. A longer *Travel time* also lets road legs stay closer.
-- **Short and punchy.** For social media use 9:16, 10 to 20 seconds of travel time and pauses of 1 to 2 seconds.
+- **Closer or wider.** If a leg feels too far or too close, nudge its transport with *Zoom per transport*.
+- **Too slow or too fast?** Switch the pace between *Slow*, *Normal* and *Fast*, or raise one leg's *Speed* to hurry through a less interesting part.
+- **Short and punchy.** For social media use 9:16, *Fast* pace (or *Fixed length* of 10 to 20 seconds) and pauses of 1 to 2 seconds.
 - **Add a marker at every transport change** (an airport, a harbour, a station) with a 1.5 to 2 second pause and a story card. It gives the viewer time to understand the change.
 - **Draw coarse, then refine.** Place a few points, then drag them. Roads and curves do the rest.
 - **Use your own photos.** Upload photos to any image host and paste the address into *Photo URL*.

@@ -15,6 +15,7 @@ By **Geekatplay Studio** · Vladimir Chopine
 - **Shortest flight paths.** Great-circle arcs that take the short way round the globe, including across the date line.
 - **15 transports.** Car, 4x4, camper, bus, motorcycle, bicycle, on foot, two trains, two planes, helicopter, balloon, boat and ferry, each with shaded symbols, shadows and motion trails (contrails, wakes, smoke, dust).
 - **Markers and story cards.** Pins, flags, dots, polaroid photos and text, 25 icons, any colour. Pop in on arrival, pause the animation, show a card with title, subtitle and photo.
+- **Even pacing.** Every vehicle crosses the frame at the same comfortable pace (Slow, Normal or Fast), and the video length follows from the route, or set a fixed length.
 - **Camera director.** Follow the line with automatic per-leg framing (walking close, driving a little out, flying wide), zoom per transport, look-ahead, steadiness, tilt, north-up or direction of travel), glide between two saved shots, or hold a fixed view. Intro zoom-in and outro pull-back included.
 - **Maps that look good.** Crisp vector basemaps (light, dark, streets, bright, fiord, treasure map), satellite and topographic, with optional 3D terrain and hillshade. No API keys needed.
 - **Sound.** A synthesised engine or wind bed per transport, a whoosh at every transport change and a chime at every stop, optionally mixed into the exported video.

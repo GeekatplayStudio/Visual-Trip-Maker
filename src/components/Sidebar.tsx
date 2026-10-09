@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold text-white truncate">{s.title}</div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          {s.lengthKm.toFixed(0)} km · {s.points.length} pts{routingBusy.has(s.id) ? ' · routing…' : ''}
+                          {s.lengthKm < 10 ? s.lengthKm.toFixed(1) : s.lengthKm.toFixed(0)} km · {(model.segments[idx]?.durationSec ?? 0).toFixed(1)} s{routingBusy.has(s.id) ? ' · routing…' : ''}
                         </div>
                       </div>
                       {active && (
@@ -227,7 +227,7 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                   </div>
                 </div>
 
-                <Slider label="Speed (sets how long this leg takes)" value={seg.speedKmh} min={3} max={950} step={1} onChange={(v) => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, speedKmh: v }), false)} format={(v) => `${v} km/h`} />
+                <Slider label="Speed (faster = this leg takes less time)" value={seg.speedKmh} min={3} max={950} step={1} onChange={(v) => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, speedKmh: v }), false)} format={(v) => `${v} km/h`} />
                 {(seg.transportMode === 'airplane' || seg.transportMode === 'propeller') && (
                   <Slider label="Cruise altitude (3D vehicle)" value={seg.altitudeMeters} min={500} max={14000} step={250} onChange={(v) => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, altitudeMeters: v }), false)} format={(v) => `${v} m`} />
                 )}

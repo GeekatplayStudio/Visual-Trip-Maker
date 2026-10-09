@@ -1,4 +1,4 @@
-import type { CameraShot, RouteProject, Steadiness, TransportMode } from '../types';
+import type { CameraShot, RouteProject, Steadiness } from '../types';
 import { END_HOLD_SECONDS, distanceAtTime, sampleAtDistance, travelStartTime, travelToTimeline, zoomTierOffset, type RouteModel } from './geoUtils';
 
 export interface CameraPose {
@@ -60,47 +60,9 @@ export function closeShot(model: RouteModel, km: number, zoom: number, pitch = 0
   return { center: [s.lng, s.lat], zoom, pitch, bearing };
 }
 
-/**
- * How much ground (km across the short side of the frame) each transport is naturally filmed with.
- * Walking is very close, road vehicles a little further out, trains and boats wider, flights wide.
- */
-export const VIEW_RANGE_KM: Record<TransportMode, [number, number]> = {
-  hiker: [0.2, 3],
-  bicycle: [0.6, 10],
-  motorcycle: [1.5, 35],
-  sports_car: [1.5, 40],
-  suv: [1.5, 40],
-  camper: [1.5, 40],
-  bus: [1.5, 40],
-  steam_train: [4, 90],
-  bullet_train: [6, 160],
-  yacht: [3, 120],
-  ferry: [4, 140],
-  helicopter: [2, 60],
-  balloon: [1, 25],
-  propeller: [30, 900],
-  airplane: [200, 5000],
-};
-
-/** Seconds the symbol should take to cross the frame; sets the pace-based framing. */
-const CROSS_SECONDS = 2.5;
-/** Fastest acceptable crossing of the frame, so very long legs in short videos stay readable. */
-const MIN_CROSS_SECONDS = 1.0;
-
-/** Visible ground width (km) chosen for a leg from its transport, pace and length. */
-export function legViewKm(project: RouteProject, model: RouteModel, segIdx: number): number {
-  const seg = project.segments[segIdx];
-  const sm = model.segments[segIdx];
-  if (!seg || !sm) return 30;
-  const [minKm, maxKm] = VIEW_RANGE_KM[seg.transportMode] ?? [2, 60];
-  // pace: the frame should be crossed in about CROSS_SECONDS, within the transport's natural range
-  const kmPerSec = sm.durationSec > 0 ? sm.lengthKm / sm.durationSec : 0;
-  let km = clamp(kmPerSec * CROSS_SECONDS, minKm, maxKm);
-  // readability floor: never cross the frame faster than MIN_CROSS_SECONDS, even if that means wider
-  km = Math.max(km, kmPerSec * MIN_CROSS_SECONDS);
-  // a short leg stays close enough that it does not shrink to a dot
-  km = Math.min(km, Math.max(minKm, sm.lengthKm * 1.2));
-  return km;
+/** Ground width (km across the short side of the frame) the camera uses for a leg. */
+export function legViewKm(_project: RouteProject, model: RouteModel, segIdx: number): number {
+  return model.segments[segIdx]?.viewKm ?? 30;
 }
 
 /** Zoom that shows `km` across the short side of the viewport at a latitude (512 px tiles). */

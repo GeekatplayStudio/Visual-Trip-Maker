@@ -59,7 +59,7 @@ export const App: React.FC = () => {
   const lastTelRef = useRef<ReturnType<MapFrameApi['renderFrame']> | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
 
-  const model = useMemo(() => buildRouteModel(project), [project.segments, project.waypoints, project.durationSeconds, project.camera, project.stillAtStart, project.stillAtEnd]); // eslint-disable-line react-hooks/exhaustive-deps
+  const model = useMemo(() => buildRouteModel(project), [project.segments, project.waypoints, project.durationSeconds, project.lengthMode, project.pace, project.camera, project.stillAtStart, project.stillAtEnd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------------------------------------------- helpers
   const showToast = useCallback((msg: string) => {
@@ -190,7 +190,7 @@ export const App: React.FC = () => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
   const precacheAbortRef = useRef<AbortController | null>(null);
-  const precacheKey = JSON.stringify([project.segments.map((s) => [s.id, s.coordinates.length, s.transportMode, s.speedKmh]), project.waypoints.map((w) => [w.lng, w.lat, w.dwellTime]), project.camera, project.durationSeconds, project.stillAtStart, project.stillAtEnd, project.mapTheme, project.terrain3D, project.terrainExaggeration, project.hillshade, project.aspectRatio]);
+  const precacheKey = JSON.stringify([project.segments.map((s) => [s.id, s.coordinates.length, s.transportMode, s.speedKmh]), project.waypoints.map((w) => [w.lng, w.lat, w.dwellTime]), project.camera, project.durationSeconds, project.lengthMode, project.pace, project.stillAtStart, project.stillAtEnd, project.mapTheme, project.terrain3D, project.terrainExaggeration, project.hillshade, project.aspectRatio]);
 
   const runPrecache = useCallback(async (key: string, shouldPause?: () => boolean) => {
     const api = apiRef.current;

@@ -1,4 +1,5 @@
 import * as turf from '@turf/turf';
+import { MIN_CROSS_SECONDS, PACE_SECONDS_PER_SCREEN, naturalViewKm, speedFactor } from './framing';
 import type {
   RouteProject,
   RouteSegment,
@@ -216,6 +217,8 @@ interface SegmentModel {
   /** travel time (seconds, excluding pauses) at which this leg starts */
   startTime: number;
   durationSec: number;
+  /** ground width (km across the short side of the frame) the camera uses for this leg */
+  viewKm: number;
 }
 
 export interface DwellEvent {
@@ -260,21 +263,33 @@ export function buildRouteModel(project: RouteProject): RouteModel {
       cum.push(cum[j - 1] + turf.distance(coords[j - 1], coords[j], { units: 'kilometers' }));
     }
     const lengthKm = cum[cum.length - 1] || 0;
-    segments.push({ index: i, coords, cum, lengthKm, startKm, startTime: 0, durationSec: 0 });
+    segments.push({ index: i, coords, cum, lengthKm, startKm, startTime: 0, durationSec: 0, viewKm: 1 });
     startKm += lengthKm;
   }
   const totalKm = startKm;
 
-  // Speed-weighted time allocation: time share ∝ length / speed
-  const travelSeconds = Math.max(1, project.durationSeconds);
-  const weights = segments.map((s) => (s.lengthKm > 0 ? s.lengthKm / Math.max(1, project.segments[s.index].speedKmh) : 0));
+  // Time per leg ∝ screens of ground crossed: each transport is framed at its natural width, so a
+  // car, a walk and a flight move across the frame at the same pace. A leg's speed setting relative
+  // to its transport's default makes it quicker or slower.
+  for (const s of segments) {
+    const seg = project.segments[s.index];
+    s.viewKm = s.lengthKm > 0 ? naturalViewKm(seg.transportMode, s.lengthKm) : 1;
+  }
+  const weights = segments.map((s) => {
+    const seg = project.segments[s.index];
+    return s.lengthKm > 0 ? s.lengthKm / s.viewKm / speedFactor(seg.transportMode, seg.speedKmh) : 0;
+  });
   const wSum = weights.reduce((a, b) => a + b, 0);
+  const auto = project.lengthMode !== 'fixed';
+  const travelSeconds = auto ? Math.max(2, wSum * (PACE_SECONDS_PER_SCREEN[project.pace] ?? 2.4)) : Math.max(1, project.durationSeconds);
   let t = 0;
   segments.forEach((s, i) => {
     const share = wSum > 0 ? weights[i] / wSum : s.lengthKm > 0 ? 1 / segments.length : 0;
     s.startTime = t;
     s.durationSec = share * travelSeconds;
     t += s.durationSec;
+    // with a fixed length a leg may have to move faster than the pace; frame it wider so it stays readable
+    if (!auto && s.durationSec > 0) s.viewKm = Math.max(s.viewKm, (s.lengthKm / s.durationSec) * MIN_CROSS_SECONDS);
   });
 
   // Waypoint anchors: project each marker onto the route
@@ -499,6 +514,7 @@ export function interpolateRouteState(project: RouteProject, model: RouteModel, 
     speedKmh: 0,
     progress01: 0,
     distanceCoveredKm: 0,
+    distanceKm: 0,
     totalDistanceKm: 0,
     currentSegmentIndex: 0,
     activeWaypoint: null,
@@ -608,6 +624,7 @@ export function interpolateRouteState(project: RouteProject, model: RouteModel, 
     speedKmh: tt.phase === 'travel' ? Math.round(seg?.speedKmh || 0) : 0,
     progress01: model.totalKm > 0 ? km / model.totalKm : 0,
     distanceCoveredKm: Math.round(km * 10) / 10,
+    distanceKm: km,
     totalDistanceKm: Math.round(model.totalKm * 10) / 10,
     currentSegmentIndex,
     activeWaypoint,

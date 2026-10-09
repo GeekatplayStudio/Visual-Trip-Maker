@@ -55,6 +55,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <ul>
+          <li><b>Pace.</b> With <b>Auto length</b> (the default) every vehicle crosses the frame at the same comfortable pace and the video length follows: choose Slow, Normal or Fast below the timeline. <b>Fixed length</b> lets you set the travel time instead; very long legs are then framed wider so they stay readable.</li>
           <li><b>Follow the line</b> keeps the symbol in view. <b>Auto</b> zoom frames every leg on its own: walking very close, cars and buses a little further out, trains and boats wider, flights wide. <b>Zoom per transport</b> fine-tunes it. Choose north-up, direction of travel or a fixed angle, how far the camera looks ahead, how steady it is and the tilt. Start and end on the <b>whole route</b> add an intro zoom-in and an outro pull-back.</li>
           <li><b>Start to end</b> glides between two shots you save from the map. The quick moves set both shots for you.</li>
           <li><b>Fixed view</b> films one saved view.</li>

@@ -99,6 +99,17 @@ const LYR = {
 
 const emptyFC = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] });
 
+/** Initial great-circle bearing (degrees clockwise from north) from a to b. */
+function bearingBetween(a: { lng: number; lat: number }, b: { lng: number; lat: number }): number {
+  const r = Math.PI / 180;
+  const p1 = a.lat * r;
+  const p2 = b.lat * r;
+  const dl = (b.lng - a.lng) * r;
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
 // MapLibre uses 512 px tiles: the world is 512 * 2^zoom px wide.
 const metersPerPixel = (lat: number, zoom: number) => (78271.517 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
 
@@ -725,7 +736,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     }
     const segNow = proj.segments[tel.currentSegmentIndex];
     // end the line at the back of the symbol instead of running through it
-    let km = tel.distanceCoveredKm;
+    let km = tel.distanceKm;
     if (proj.vehicleStyle === 'icon' && segNow && tel.phase !== 'intro') {
       const trimPx = SPRITE_LENGTH_PX[segNow.transportMode] * 0.3 * proj.vehicleScale;
       const trimKm = (metersPerPixel(tel.lat, zoom) * trimPx) / 1000;
@@ -781,6 +792,16 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     const head = map.getSource(SRC.head) as GeoJSONSource | undefined;
     const seg = proj.segments[tel.currentSegmentIndex];
     const color = seg?.color || theme.accent;
+    // Heading from the vehicle's own length on the road (rear to front, like its axles), measured at
+    // the current zoom, so it follows bends exactly and ignores wiggles shorter than the vehicle.
+    let heading = tel.bearing;
+    if (seg && mdl.totalKm > 0) {
+      const lengthPx = (proj.vehicleStyle === '3d' ? VEHICLE_PX[seg.transportMode] : SPRITE_LENGTH_PX[seg.transportMode] * 0.9) * proj.vehicleScale;
+      const halfKm = (metersPerPixel(tel.lat, zoom) * lengthPx * 0.5) / 1000;
+      const rear = sampleAtDistance(mdl, tel.distanceKm - halfKm);
+      const front = sampleAtDistance(mdl, tel.distanceKm + halfKm);
+      if (Math.abs(front.lng - rear.lng) + Math.abs(front.lat - rear.lat) > 1e-9) heading = bearingBetween(rear, front);
+    }
     const moving = tel.phase === 'travel' || tel.phase === 'dwell' || tel.phase === 'done';
     const headVisible = proj.showHeadBeacon && mdl.totalKm > 0;
     if (head && (headVisible || !sentRef.current.headEmpty)) {
@@ -813,7 +834,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         const mode = seg.transportMode;
         const mpp = metersPerPixel(tel.lat, zoom);
         const pxKm = (px: number) => (mpp * px) / 1000; // px → km at this zoom
-        const headKm = tel.distanceCoveredKm;
+        const headKm = tel.distanceKm;
         const behind = (px: number) => sampleAtDistance(mdl, Math.max(0, headKm - pxKm(px)));
         const flying = FLYING_MODES.includes(mode);
         const water = WATER_MODES.includes(mode);
@@ -829,7 +850,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
           }
         } else if (water) {
           // wake: two diverging foam lines + a few foam dots
-          const rad = ((tel.bearing + 180) * Math.PI) / 180; // pointing backwards
+          const rad = ((heading + 180) * Math.PI) / 180; // pointing backwards
           const perp = rad + Math.PI / 2;
           const degPerPx = (mpp / 111320) ; // approx deg lat per px
           const cosLat = Math.cos((tel.lat * Math.PI) / 180);
@@ -889,7 +910,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         lng: tel.lng,
         lat: tel.lat,
         alt: ground,
-        bearing: tel.bearing,
+        bearing: heading,
         sizeM: metersPerPixel(tel.lat, zoom) * 64 * 0.9 * proj.vehicleScale,
         key: spriteTexture(seg.transportMode, seg.color),
         visible: true,
@@ -906,7 +927,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         lng: tel.lng,
         lat: tel.lat,
         alt: tel.altitudeMeters + ground,
-        bearing: tel.bearing,
+        bearing: heading,
         pitch: tel.pitch,
         roll: tel.roll,
         scale: (mpp * px) / vehicleLengthRef.current,
