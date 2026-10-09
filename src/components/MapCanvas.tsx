@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { CameraShot, EditTool, RouteProject, TransportMode, VehicleTelemetry } from '../types';
 import { create3DVehicle, type Vehicle3DInstance } from '../services/threeVehicles';
 import { FLYING_MODES, WATER_MODES, interpolateRouteState, sampleAtDistance, type RouteModel } from '../services/geoUtils';
-import { computeCameraPose } from '../services/cameraDirector';
+import { computeCameraPose, type CameraPose } from '../services/cameraDirector';
 import { DEM_SOURCE_ID, firstSymbolLayerId, labelLayerIds, loadThemeStyle, themeInfo } from '../services/mapStyles';
 import { SPRITE_LENGTH_PX, renderGlow, renderGroundShadow, renderLegBadge, renderMarkerIcon, renderPhotoMarker, renderVehicleSprite } from '../services/markerIcons';
 import { paintOverlay, preloadPhotos } from '../services/overlayPainter';
@@ -25,6 +25,18 @@ export interface MapFrameApi {
   /** Fly the map to a shot (camera must be unlocked). */
   showView: (shot: CameraShot) => void;
   getViewport: () => { width: number; height: number };
+  /**
+   * Walk the camera path on a hidden twin map so every tile the video needs is in the browser cache.
+   * Resolves when done or aborted.
+   */
+  precache: (opts: PrecacheOptions) => Promise<void>;
+}
+
+export interface PrecacheOptions {
+  onProgress?: (done: number, total: number) => void;
+  signal?: AbortSignal;
+  /** While this returns true the walk waits (e.g. during playback). */
+  shouldPause?: () => boolean;
 }
 
 interface MapCanvasProps {
@@ -54,7 +66,7 @@ const SRC = {
   traveled: 'src-route-traveled',
   head: 'src-route-head',
   markers: 'src-markers',
-  vehicle: 'src-vehicle',
+  current: 'src-route-current',
   vertices: 'src-edit-vertices',
   controlLine: 'src-edit-control-line',
   badges: 'src-leg-badges',
@@ -70,7 +82,9 @@ const LYR = {
   headGlow: 'route-head-glow',
   headRing: 'route-head-ring',
   headDot: 'route-head-dot',
-  vehicleBadge: 'vehicle-badge',
+  currentGlow: 'route-current-glow',
+  currentCasing: 'route-current-casing',
+  current: 'route-current',
   three: 'vehicle-3d',
   markers: 'markers',
   controlLine: 'edit-control-line',
@@ -141,12 +155,17 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
   propsRef.current = props;
 
   // Three.js
-  const threeRef = useRef<{ scene: THREE.Scene; camera: THREE.Camera; renderer: THREE.WebGLRenderer } | null>(null);
+  const threeRef = useRef<{ scene: THREE.Scene; camera: THREE.Camera; renderer: THREE.WebGLRenderer; spriteScene: THREE.Scene; spriteMesh: THREE.Mesh } | null>(null);
   const vehicleRef = useRef<Vehicle3DInstance | null>(null);
   const vehicleModeRef = useRef<TransportMode | null>(null);
   const vehicleLengthRef = useRef(1);
   const vehicleTfRef = useRef({ lng: 0, lat: 0, alt: 0, bearing: 0, pitch: 0, roll: 0, scale: 1, visible: false });
   const lastFrameTimeRef = useRef<number | null>(null);
+  // flat vehicle symbol, drawn in the WebGL layer so it moves in the same frame as the camera
+  const spriteTfRef = useRef({ lng: 0, lat: 0, alt: 0, bearing: 0, sizeM: 1, key: '', visible: false });
+  const spriteTexRef = useRef<Map<string, THREE.Texture>>(new Map());
+  // last data sent to the map worker, to skip unchanged updates
+  const sentRef = useRef<{ doneKey: string; markers: string; headEmpty: boolean; trailEmpty: boolean; overlayDirty: boolean }>({ doneKey: '', markers: '', headEmpty: false, trailEmpty: false, overlayDirty: true });
 
   // marker images
   const imagesRef = useRef<Set<string>>(new Set());
@@ -191,7 +210,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     ensureImage(map, `glow:${accent}`, () => renderGlow(accent));
     ensureImage(map, 'ground-shadow', () => renderGroundShadow());
     for (const seg of proj.segments) {
-      ensureImage(map, `sprite:${seg.transportMode}:${seg.color}`, () => renderVehicleSprite(seg.transportMode, seg.color));
       ensureImage(map, `badge:${seg.transportMode}:${seg.color}`, () => renderLegBadge(seg.transportMode, seg.color));
     }
   };
@@ -238,6 +256,9 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         geometry: { type: 'Point', coordinates: [wp.lng, wp.lat] },
       };
     });
+    const key = JSON.stringify(features);
+    if (key === sentRef.current.markers) return;
+    sentRef.current.markers = key;
     src.setData({ type: 'FeatureCollection', features });
   };
 
@@ -350,11 +371,12 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     const darkCasing = theme.dark;
     const casingColor = darkCasing ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.95)';
 
+    sentRef.current = { doneKey: '', markers: '', headEmpty: false, trailEmpty: false, overlayDirty: true };
     map.addSource(SRC.upcoming, { type: 'geojson', data: emptyFC() });
-    map.addSource(SRC.traveled, { type: 'geojson', data: emptyFC(), lineMetrics: false });
+    map.addSource(SRC.traveled, { type: 'geojson', data: emptyFC() });
+    map.addSource(SRC.current, { type: 'geojson', data: emptyFC() });
     map.addSource(SRC.head, { type: 'geojson', data: emptyFC() });
     map.addSource(SRC.markers, { type: 'geojson', data: emptyFC() });
-    map.addSource(SRC.vehicle, { type: 'geojson', data: emptyFC() });
     map.addSource(SRC.vertices, { type: 'geojson', data: emptyFC() });
     map.addSource(SRC.controlLine, { type: 'geojson', data: emptyFC() });
     map.addSource(SRC.badges, { type: 'geojson', data: emptyFC() });
@@ -383,41 +405,53 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       beforeLabels,
     );
 
-    // Travelled route: glow + casing + core, data-driven per leg
-    map.addLayer(
-      {
-        id: LYR.traveledGlow,
-        type: 'line',
-        source: SRC.traveled,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': ['get', 'color'], 'line-width': ['*', ['get', 'width'], 3.2 * proj.lineScale], 'line-opacity': ['case', ['get', 'glow'], 0.28, 0], 'line-blur': 10 },
-      },
-      beforeLabels,
-    );
-    map.addLayer(
-      {
-        id: LYR.traveledCasing,
-        type: 'line',
-        source: SRC.traveled,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': casingColor, 'line-width': ['+', ['*', ['get', 'width'], proj.lineScale], 4], 'line-opacity': 0.9 },
-      },
-      beforeLabels,
-    );
-    map.addLayer(
-      {
-        id: LYR.traveled,
-        type: 'line',
-        source: SRC.traveled,
-        layout: { 'line-cap': ['case', ['==', ['get', 'style'], 'solid'], 'round', 'butt'], 'line-join': 'round' },
-        paint: {
-          'line-color': ['get', 'color'],
-          'line-width': ['*', ['get', 'width'], proj.lineScale],
-          'line-dasharray': ['case', ['==', ['get', 'style'], 'dashed'], ['literal', [2, 1.6]], ['==', ['get', 'style'], 'dots'], ['literal', [0.1, 1.9]], ['literal', [1, 0]]],
+    // Travelled route: finished legs (updated only when a leg completes) and the current leg (every
+    // frame), drawn as glow, casing and core layers interleaved so the joint between them is seamless.
+    const travelledLayers: [string, string, string][] = [
+      [LYR.traveledGlow, LYR.traveledCasing, LYR.traveled],
+      [LYR.currentGlow, LYR.currentCasing, LYR.current],
+    ];
+    const travelledSources = [SRC.traveled, SRC.current];
+    for (let i = 0; i < 2; i++) {
+      map.addLayer(
+        {
+          id: travelledLayers[i][0],
+          type: 'line',
+          source: travelledSources[i],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': ['get', 'color'], 'line-width': ['*', ['get', 'width'], 3.2 * proj.lineScale], 'line-opacity': ['case', ['get', 'glow'], 0.28, 0], 'line-blur': 10 },
         },
-      },
-      beforeLabels,
-    );
+        beforeLabels,
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      map.addLayer(
+        {
+          id: travelledLayers[i][1],
+          type: 'line',
+          source: travelledSources[i],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': casingColor, 'line-width': ['+', ['*', ['get', 'width'], proj.lineScale], 4], 'line-opacity': 0.9 },
+        },
+        beforeLabels,
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      map.addLayer(
+        {
+          id: travelledLayers[i][2],
+          type: 'line',
+          source: travelledSources[i],
+          layout: { 'line-cap': ['case', ['==', ['get', 'style'], 'solid'], 'round', 'butt'], 'line-join': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': ['*', ['get', 'width'], proj.lineScale],
+            'line-dasharray': ['case', ['==', ['get', 'style'], 'dashed'], ['literal', [2, 1.6]], ['==', ['get', 'style'], 'dots'], ['literal', [0.1, 1.9]], ['literal', [1, 0]]],
+          },
+        },
+        beforeLabels,
+      );
+    }
 
     // Motion trails: contrail / wake lines and smoke / dust / foam puffs
     map.addLayer({
@@ -464,21 +498,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       paint: { 'circle-radius': 5.5, 'circle-color': '#ffffff', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 3, 'circle-pitch-alignment': 'map' },
     });
 
-    // 2D vehicle sprite (icon vehicle style): lies on the map and turns with the heading
-    map.addLayer({
-      id: LYR.vehicleBadge,
-      type: 'symbol',
-      source: SRC.vehicle,
-      layout: {
-        'icon-image': ['get', 'sprite'],
-        'icon-size': ['get', 'size'],
-        'icon-rotate': ['get', 'bearing'],
-        'icon-rotation-alignment': 'map',
-        'icon-pitch-alignment': 'map',
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
-      },
-    });
 
     // 3D vehicle
     addThreeLayer(map);
@@ -571,7 +590,15 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         scene.add(new THREE.HemisphereLight(0xffffff, 0x64748b, 1.0));
         const renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
         renderer.autoClear = false;
-        threeRef.current = { scene, camera, renderer };
+        // flat symbol: a unit quad lying on the map, textured with the vehicle sprite
+        const spriteScene = new THREE.Scene();
+        const spriteMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(1, 1),
+          new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+        );
+        spriteMesh.frustumCulled = false;
+        spriteScene.add(spriteMesh);
+        threeRef.current = { scene, camera, renderer, spriteScene, spriteMesh };
         // re-attach vehicle after a style switch
         vehicleModeRef.current = null;
         syncVehicleModel(projectRef.current, timeRef.current);
@@ -583,26 +610,64 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       render: (_gl: WebGLRenderingContext | WebGL2RenderingContext, args: unknown) => {
         const three = threeRef.current;
         const tf = vehicleTfRef.current;
-        if (!three || !tf.visible) return;
+        const sp = spriteTfRef.current;
+        if (!three || (!tf.visible && !sp.visible)) return;
         const a = args as { modelViewProjectionMatrix?: ArrayLike<number>; defaultProjectionData?: { mainMatrix: ArrayLike<number> } };
         const mvp = a.defaultProjectionData?.mainMatrix ?? a.modelViewProjectionMatrix;
         if (!mvp) return;
-        const coord = maplibregl.MercatorCoordinate.fromLngLat([tf.lng, tf.lat], tf.alt);
-        const s = coord.meterInMercatorCoordinateUnits() * tf.scale;
-        const theta = THREE.MathUtils.degToRad(180 - tf.bearing);
-        const l = new THREE.Matrix4()
-          .makeTranslation(coord.x, coord.y, coord.z)
-          .scale(new THREE.Vector3(s, -s, s))
-          .multiply(new THREE.Matrix4().makeRotationZ(theta))
-          .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
-          .multiply(new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(-tf.pitch)))
-          .multiply(new THREE.Matrix4().makeRotationZ(THREE.MathUtils.degToRad(tf.roll)));
-        three.camera.projectionMatrix = new THREE.Matrix4().fromArray(Array.from(mvp)).multiply(l);
+        const viewProj = new THREE.Matrix4().fromArray(Array.from(mvp));
         three.renderer.resetState();
-        three.renderer.render(three.scene, three.camera);
+        if (sp.visible) {
+          const tex = spriteTexRef.current.get(sp.key);
+          if (tex) {
+            const mat = three.spriteMesh.material as THREE.MeshBasicMaterial;
+            if (mat.map !== tex) {
+              mat.map = tex;
+              mat.needsUpdate = true;
+            }
+            const coord = maplibregl.MercatorCoordinate.fromLngLat([sp.lng, sp.lat], sp.alt);
+            const s = coord.meterInMercatorCoordinateUnits() * sp.sizeM;
+            const l = new THREE.Matrix4()
+              .makeTranslation(coord.x, coord.y, coord.z)
+              .scale(new THREE.Vector3(s, -s, s))
+              .multiply(new THREE.Matrix4().makeRotationZ(THREE.MathUtils.degToRad(-sp.bearing)));
+            three.camera.projectionMatrix = viewProj.clone().multiply(l);
+            three.renderer.render(three.spriteScene, three.camera);
+          }
+        }
+        if (tf.visible) {
+          const coord = maplibregl.MercatorCoordinate.fromLngLat([tf.lng, tf.lat], tf.alt);
+          const s = coord.meterInMercatorCoordinateUnits() * tf.scale;
+          const theta = THREE.MathUtils.degToRad(180 - tf.bearing);
+          const l = new THREE.Matrix4()
+            .makeTranslation(coord.x, coord.y, coord.z)
+            .scale(new THREE.Vector3(s, -s, s))
+            .multiply(new THREE.Matrix4().makeRotationZ(theta))
+            .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
+            .multiply(new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(-tf.pitch)))
+            .multiply(new THREE.Matrix4().makeRotationZ(THREE.MathUtils.degToRad(tf.roll)));
+          three.camera.projectionMatrix = viewProj.multiply(l);
+          three.renderer.render(three.scene, three.camera);
+        }
       },
     };
     map.addLayer(layer);
+  };
+
+  const spriteTexture = (mode: TransportMode, color: string): string => {
+    const key = `${mode}:${color}`;
+    if (!spriteTexRef.current.has(key)) {
+      const icon = renderVehicleSprite(mode, color);
+      const canvas = document.createElement('canvas');
+      canvas.width = icon.width;
+      canvas.height = icon.height;
+      canvas.getContext('2d')!.putImageData(icon.data, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      spriteTexRef.current.set(key, tex);
+    }
+    return key;
   };
 
   const syncVehicleModel = (proj: RouteProject, time: number) => {
@@ -662,40 +727,51 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     // end the line at the back of the symbol instead of running through it
     let km = tel.distanceCoveredKm;
     if (proj.vehicleStyle === 'icon' && segNow && tel.phase !== 'intro') {
-      const trimPx = SPRITE_LENGTH_PX[segNow.transportMode] * 0.42 * proj.vehicleScale;
+      const trimPx = SPRITE_LENGTH_PX[segNow.transportMode] * 0.3 * proj.vehicleScale;
       const trimKm = (metersPerPixel(tel.lat, zoom) * trimPx) / 1000;
       km = Math.max(0, km - trimKm);
     }
 
-    // travelled geometry per segment
-    const traveled = map.getSource(SRC.traveled) as GeoJSONSource | undefined;
-    if (traveled) {
-      const features: GeoJSON.Feature[] = [];
+    // travelled geometry: finished legs only when that set changes, the current leg every frame
+    const doneSrc = map.getSource(SRC.traveled) as GeoJSONSource | undefined;
+    const curSrc = map.getSource(SRC.current) as GeoJSONSource | undefined;
+    if (doneSrc && curSrc) {
+      const legFeature = (sm: (typeof mdl.segments)[number], coords: [number, number][]): GeoJSON.Feature => {
+        const sg = proj.segments[sm.index];
+        return { type: 'Feature', properties: { color: sg.color, width: sg.lineWidth, style: sg.lineStyle, glow: sg.glow }, geometry: { type: 'LineString', coordinates: coords } };
+      };
+      const done: GeoJSON.Feature[] = [];
+      let current: GeoJSON.Feature | null = null;
       for (const sm of mdl.segments) {
         if (sm.coords.length < 2 || sm.lengthKm <= 0) continue;
-        const seg = proj.segments[sm.index];
         const local = km - sm.startKm;
         if (local <= 0) break;
-        let coords: [number, number][];
-        if (local >= sm.lengthKm) coords = sm.coords;
-        else {
-          let lo = 0;
-          let hi = sm.cum.length - 1;
-          while (lo < hi - 1) {
-            const mid = (lo + hi) >> 1;
-            if (sm.cum[mid] <= local) lo = mid;
-            else hi = mid;
-          }
-          const a = sm.coords[lo];
-          const b = sm.coords[hi];
-          const span = sm.cum[hi] - sm.cum[lo];
-          const f = span > 0 ? (local - sm.cum[lo]) / span : 0;
-          coords = sm.coords.slice(0, lo + 1);
-          coords.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]);
+        if (local >= sm.lengthKm) {
+          done.push(legFeature(sm, sm.coords));
+          continue;
         }
-        features.push({ type: 'Feature', properties: { color: seg.color, width: seg.lineWidth, style: seg.lineStyle, glow: seg.glow }, geometry: { type: 'LineString', coordinates: coords } });
+        let lo = 0;
+        let hi = sm.cum.length - 1;
+        while (lo < hi - 1) {
+          const mid = (lo + hi) >> 1;
+          if (sm.cum[mid] <= local) lo = mid;
+          else hi = mid;
+        }
+        const a = sm.coords[lo];
+        const b = sm.coords[hi];
+        const span = sm.cum[hi] - sm.cum[lo];
+        const f = span > 0 ? (local - sm.cum[lo]) / span : 0;
+        const coords = sm.coords.slice(0, lo + 1);
+        coords.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]);
+        current = legFeature(sm, coords);
+        break;
       }
-      traveled.setData({ type: 'FeatureCollection', features });
+      const doneKey = `${done.length}`;
+      if (doneKey !== sentRef.current.doneKey) {
+        sentRef.current.doneKey = doneKey;
+        doneSrc.setData({ type: 'FeatureCollection', features: done });
+      }
+      curSrc.setData({ type: 'FeatureCollection', features: current ? [current] : [] });
     }
 
     // camera
@@ -706,7 +782,9 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     const seg = proj.segments[tel.currentSegmentIndex];
     const color = seg?.color || theme.accent;
     const moving = tel.phase === 'travel' || tel.phase === 'dwell' || tel.phase === 'done';
-    if (head) {
+    const headVisible = proj.showHeadBeacon && mdl.totalKm > 0;
+    if (head && (headVisible || !sentRef.current.headEmpty)) {
+      sentRef.current.headEmpty = !headVisible;
       const pulse = (Math.sin(time * 4.2) + 1) / 2;
       head.setData(
         proj.showHeadBeacon && mdl.totalKm > 0
@@ -796,19 +874,28 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
           shadowFeats.push({ type: 'Feature', properties: { size: (0.7 + alt * 0.9) * sizeF, opacity: 0.6 - alt * 0.35 }, geometry: { type: 'Point', coordinates: [tel.lng - (off * degPerPx) / cosLat, tel.lat - off * degPerPx] } });
         }
       }
-      trailSrc.setData({ type: 'FeatureCollection', features: feats });
-      shadowSrc.setData({ type: 'FeatureCollection', features: shadowFeats });
+      const empty = feats.length === 0 && shadowFeats.length === 0;
+      if (!(empty && sentRef.current.trailEmpty)) {
+        trailSrc.setData({ type: 'FeatureCollection', features: feats });
+        shadowSrc.setData({ type: 'FeatureCollection', features: shadowFeats });
+      }
+      sentRef.current.trailEmpty = empty;
     }
 
     // vehicle
-    const vehicleSrc = map.getSource(SRC.vehicle) as GeoJSONSource | undefined;
-    if (vehicleSrc) {
-      if (proj.vehicleStyle === 'icon' && seg && mdl.totalKm > 0) {
-        vehicleSrc.setData({
-          type: 'FeatureCollection',
-          features: [{ type: 'Feature', properties: { sprite: `sprite:${seg.transportMode}:${seg.color}`, bearing: tel.bearing, size: 0.9 * proj.vehicleScale }, geometry: { type: 'Point', coordinates: [tel.lng, tel.lat] } }],
-        });
-      } else vehicleSrc.setData(emptyFC());
+    if (proj.vehicleStyle === 'icon' && seg && mdl.totalKm > 0) {
+      const ground = proj.terrain3D ? map.queryTerrainElevation([tel.lng, tel.lat]) || 0 : 0;
+      spriteTfRef.current = {
+        lng: tel.lng,
+        lat: tel.lat,
+        alt: ground,
+        bearing: tel.bearing,
+        sizeM: metersPerPixel(tel.lat, zoom) * 64 * 0.9 * proj.vehicleScale,
+        key: spriteTexture(seg.transportMode, seg.color),
+        visible: true,
+      };
+    } else {
+      spriteTfRef.current.visible = false;
     }
     if (proj.vehicleStyle === '3d' && seg && mdl.totalKm > 0) {
       syncVehicleModel(proj, time);
@@ -838,9 +925,11 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
 
     // overlay (story cards / HUD)
     const ov = overlayRef.current;
-    if (ov) {
+    const needsOverlay = (proj.showStoryCards && !!tel.activeWaypoint?.showCard) || (proj.showHud && tel.totalDistanceKm > 0);
+    if (ov && (needsOverlay || sentRef.current.overlayDirty)) {
       const ctx = ov.getContext('2d');
       if (ctx) paintOverlay({ ctx, width: ov.width, height: ov.height, project: proj, telemetry: tel, accent: theme.accent, dark: theme.dark });
+      sentRef.current.overlayDirty = needsOverlay;
     }
     return tel;
   };
@@ -853,6 +942,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     if (ov.width !== c.width || ov.height !== c.height) {
       ov.width = c.width;
       ov.height = c.height;
+      sentRef.current.overlayDirty = true;
     }
   };
 
@@ -875,6 +965,106 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       map.triggerRepaint();
     });
 
+  /** Camera poses that together cover every tile the video will show. */
+  const precachePoses = (proj: RouteProject, mdl: RouteModel, vp: { width: number; height: number }): CameraPose[] => {
+    const poses: CameraPose[] = [];
+    const short = Math.min(vp.width, vp.height);
+    const mercY = (lat: number) => {
+      const sn = Math.sin((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180);
+      return 0.5 - Math.log((1 + sn) / (1 - sn)) / (4 * Math.PI);
+    };
+    const moved = (a: CameraPose, b: CameraPose) => {
+      const world = 512 * Math.pow(2, Math.max(a.zoom, b.zoom));
+      const dx = ((b.center[0] - a.center[0]) / 360) * world;
+      const dy = (mercY(b.center[1]) - mercY(a.center[1])) * world;
+      const db = Math.abs(((b.bearing - a.bearing + 540) % 360) - 180);
+      return Math.hypot(dx, dy) > short * 0.3 || Math.abs(b.zoom - a.zoom) > 0.35 || db > 15 || Math.abs(b.pitch - a.pitch) > 6;
+    };
+    let last: CameraPose | null = null;
+    for (let t = 0; t <= mdl.totalSeconds + 1e-6; t += 0.1) {
+      const p = computeCameraPose(proj, mdl, Math.min(t, mdl.totalSeconds), vp);
+      if (!last || moved(last, p)) {
+        poses.push(p);
+        last = p;
+      }
+    }
+    const end = computeCameraPose(proj, mdl, mdl.totalSeconds, vp);
+    if (last && moved(last, end)) poses.push(end);
+    return poses;
+  };
+
+  const precache = async ({ onProgress, signal, shouldPause }: PrecacheOptions) => {
+    const main = mapRef.current;
+    const proj = projectRef.current;
+    const mdl = modelRef.current;
+    if (!main || mdl.totalKm <= 0) return;
+    const cont = main.getContainer();
+    const vp = { width: cont.clientWidth || 1280, height: cont.clientHeight || 720 };
+    const poses = precachePoses(proj, mdl, vp);
+    if (!poses.length) return;
+    onProgress?.(0, poses.length);
+    const style = await loadThemeStyle(proj.mapTheme);
+    if (signal?.aborted) return;
+
+    const host = document.createElement('div');
+    Object.assign(host.style, { position: 'fixed', left: '-20000px', top: '0', width: `${vp.width}px`, height: `${vp.height}px`, pointerEvents: 'none' });
+    document.body.appendChild(host);
+    const first = poses[0];
+    const twin = new maplibregl.Map({
+      container: host,
+      style,
+      center: first.center,
+      zoom: first.zoom,
+      pitch: first.pitch,
+      bearing: first.bearing,
+      maxPitch: 80,
+      interactive: false,
+      attributionControl: false,
+      fadeDuration: 0,
+      pixelRatio: 1,
+      cancelPendingTileRequestsWhileZooming: false,
+    });
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const waitIdle = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          twin.off('idle', done);
+          resolve();
+        }, ms);
+        const done = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+        twin.once('idle', done);
+        twin.triggerRepaint();
+      });
+    try {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 15000);
+        twin.once('load', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+      if (signal?.aborted) return;
+      if (proj.terrain3D) twin.setTerrain({ source: DEM_SOURCE_ID, exaggeration: proj.terrainExaggeration });
+      else if (proj.hillshade && twin.getSource(DEM_SOURCE_ID)) twin.addLayer({ id: 'precache-hillshade', type: 'hillshade', source: DEM_SOURCE_ID });
+      await waitIdle(4000);
+      onProgress?.(1, poses.length);
+      for (let i = 1; i < poses.length; i++) {
+        while (shouldPause?.() && !signal?.aborted) await sleep(250);
+        if (signal?.aborted) return;
+        const p = poses[i];
+        twin.jumpTo({ center: p.center, zoom: p.zoom, pitch: p.pitch, bearing: p.bearing });
+        await waitIdle(3000);
+        onProgress?.(i + 1, poses.length);
+      }
+    } finally {
+      twin.remove();
+      host.remove();
+    }
+  };
+
   const fitRoute = () => {
     const map = mapRef.current;
     const b = modelRef.current.bounds;
@@ -886,6 +1076,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
   // ----------------------------------------------------------------- init map
   useEffect(() => {
     if (!containerRef.current) return;
+    const spriteTextures = spriteTexRef.current;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#111827' } }] },
@@ -897,6 +1088,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       attributionControl: { compact: true },
       canvasContextAttributes: { antialias: true, preserveDrawingBuffer: true },
       fadeDuration: 0,
+      maxTileCacheZoomLevels: 10,
+      cancelPendingTileRequestsWhileZooming: false,
     });
     mapRef.current = map;
 
@@ -1006,6 +1199,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         sizeOverlay();
       },
       fitRoute,
+      precache,
       getView: () => {
         const m = mapRef.current;
         if (!m) return null;
@@ -1020,6 +1214,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       ro.disconnect();
       vehicleRef.current?.dispose();
       vehicleRef.current = null;
+      spriteTextures.forEach((t) => t.dispose());
+      spriteTextures.clear();
       map.remove();
       mapRef.current = null;
     };
@@ -1097,13 +1293,20 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     }
     if (map.getLayer(LYR.traveled)) {
       const ls = project.lineScale || 1;
-      map.setPaintProperty(LYR.traveled, 'line-width', ['*', ['get', 'width'], ls]);
-      map.setPaintProperty(LYR.traveledCasing, 'line-width', ['+', ['*', ['get', 'width'], ls], 4]);
-      map.setPaintProperty(LYR.traveledGlow, 'line-width', ['*', ['get', 'width'], 3.2 * ls]);
+      for (const [glow, casing, core] of [[LYR.traveledGlow, LYR.traveledCasing, LYR.traveled], [LYR.currentGlow, LYR.currentCasing, LYR.current]]) {
+        map.setPaintProperty(core, 'line-width', ['*', ['get', 'width'], ls]);
+        map.setPaintProperty(casing, 'line-width', ['+', ['*', ['get', 'width'], ls], 4]);
+        map.setPaintProperty(glow, 'line-width', ['*', ['get', 'width'], 3.2 * ls]);
+      }
       map.setPaintProperty(LYR.upcoming, 'line-width', ['*', ['get', 'width'], 0.55 * ls]);
       map.setPaintProperty(LYR.upcomingCasing, 'line-width', ['+', ['*', ['get', 'width'], ls], 3]);
     }
+    // build every leg's flat symbol now, not mid-playback when the leg starts
+    for (const sg of project.segments) spriteTexture(sg.transportMode, sg.color);
     vehicleModeRef.current = null; // re-evaluate the model (transport mode may have changed)
+    sentRef.current.doneKey = '';
+    sentRef.current.markers = '';
+    sentRef.current.overlayDirty = true;
     renderFrame(timeRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.segments, project.waypoints, project.markerScale, project.showMarkerLabels, project.showUpcomingRoute, project.showHeadBeacon, project.vehicleStyle, project.vehicleScale, project.lineScale, project.showTrail, model]);

@@ -151,7 +151,17 @@ interface FramingSchedule {
  * transport change (or on the leg boundary when there is none), so the camera glides in or out
  * while the line waits.
  */
+const scheduleCache = new WeakMap<RouteModel, { camera: RouteProject['camera']; segments: RouteProject['segments']; sched: FramingSchedule }>();
+
 function framingSchedule(project: RouteProject, model: RouteModel): FramingSchedule {
+  const hit = scheduleCache.get(model);
+  if (hit && hit.camera === project.camera && hit.segments === project.segments) return hit.sched;
+  const sched = buildFramingSchedule(project, model);
+  scheduleCache.set(model, { camera: project.camera, segments: project.segments, sched });
+  return sched;
+}
+
+function buildFramingSchedule(project: RouteProject, model: RouteModel): FramingSchedule {
   const cam = project.camera;
   const legs = model.segments.filter((sm) => sm.durationSec > 0);
   const n = project.segments.length;

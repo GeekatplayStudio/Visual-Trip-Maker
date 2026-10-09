@@ -71,7 +71,8 @@ function makeCanvas(w: number, h: number, pr: number) {
   const c = document.createElement('canvas');
   c.width = Math.round(w * pr);
   c.height = Math.round(h * pr);
-  const ctx = c.getContext('2d')!;
+  // CPU-backed: these canvases are read back with getImageData, which is slow on GPU canvases
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
   ctx.scale(pr, pr);
   return { c, ctx };
 }

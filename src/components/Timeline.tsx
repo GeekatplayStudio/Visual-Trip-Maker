@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { Pause, Play, Repeat, SkipBack, SkipForward } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { CheckCircle2, Loader2, Pause, Play, Repeat, SkipBack, SkipForward } from 'lucide-react';
 import type { RouteProject } from '../types';
 import { timelineLayout, type RouteModel } from '../services/geoUtils';
 import { iconGlyph } from '../services/markerIcons';
@@ -9,6 +9,10 @@ interface TimelineProps {
   project: RouteProject;
   model: RouteModel;
   currentTime: number;
+  /** Exact playback time, read every animation frame while playing. */
+  liveTimeRef: React.RefObject<number>;
+  precache: { status: 'idle' | 'running' | 'done'; done: number; total: number };
+  onPrecache: () => void;
   isPlaying: boolean;
   onSeek: (t: number) => void;
   onTogglePlay: () => void;
@@ -23,7 +27,11 @@ const fmt = (s: number) => {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${tenth}`;
 };
 
-export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime, isPlaying, onSeek, onTogglePlay, onUpdateProject, onSelectWaypoint }) => {
+export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime: stateTime, liveTimeRef, precache, onPrecache, isPlaying, onSeek, onTogglePlay, onUpdateProject, onSelectWaypoint }) => {
+  const currentTime = isPlaying ? (liveTimeRef.current ?? stateTime) : stateTime;
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const clockRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const layout = useMemo(() => timelineLayout(model), [model]);
   const total = Math.max(0.1, model.totalSeconds);
@@ -47,13 +55,30 @@ export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime,
     window.addEventListener('pointerup', up);
   };
 
+  // while playing, move the playhead every frame without re-rendering React
+  useEffect(() => {
+    if (!isPlaying) return;
+    let raf = 0;
+    const loop = () => {
+      const tNow = liveTimeRef.current ?? 0;
+      const p = pct(tNow);
+      if (playheadRef.current) playheadRef.current.style.left = p;
+      if (fillRef.current) fillRef.current.style.width = p;
+      if (clockRef.current) clockRef.current.textContent = fmt(tNow);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, total]);
+
   const wpById = new Map(project.waypoints.map((w) => [w.id, w]));
   const extras = model.stillAtStart + model.stillAtEnd + model.introSeconds + model.outroSeconds;
 
   return (
     <div className="shrink-0 border-t border-white/10 bg-[#0e131c] px-4 py-2.5 flex flex-col gap-2 z-20">
       <div className="flex items-center gap-3">
-        <span className="font-mono text-xs font-bold text-white w-16 tabular-nums">{fmt(currentTime)}</span>
+        <span ref={clockRef} className="font-mono text-xs font-bold text-white w-16 tabular-nums">{fmt(currentTime)}</span>
         <div ref={barRef} onPointerDown={onPointerDown} className="relative flex-1 h-9 cursor-pointer select-none touch-none">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-white/[0.06] border border-white/10 overflow-hidden">
             {layout.travelStart > 0 && <div className="absolute top-0 bottom-0 bg-white/10" style={{ left: 0, width: pct(layout.travelStart) }} title="Start hold / intro" />}
@@ -69,7 +94,7 @@ export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime,
               <div key={w.id} className="absolute top-0 bottom-0 bg-white/80" style={{ left: pct(w.start), width: pct(w.end - w.start) }} title={`${wpById.get(w.id)?.title} · ${(w.end - w.start).toFixed(1)}s pause`} />
             ))}
             {layout.outroStart < total && <div className="absolute top-0 bottom-0 bg-white/10" style={{ left: pct(layout.outroStart), right: 0 }} title="Outro / end hold" />}
-            <div className="absolute top-0 bottom-0 left-0 bg-white/25" style={{ width: pct(currentTime) }} />
+            <div ref={fillRef} className="absolute top-0 bottom-0 left-0 bg-white/25" style={{ width: pct(currentTime) }} />
           </div>
           {layout.waypoints.map((w) => {
             const wp = wpById.get(w.id);
@@ -91,7 +116,7 @@ export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime,
               </button>
             );
           })}
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow pointer-events-none" style={{ left: pct(currentTime) }} />
+          <div ref={playheadRef} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow pointer-events-none" style={{ left: pct(currentTime) }} />
         </div>
         <span className="font-mono text-xs text-slate-400 w-16 text-right tabular-nums">{fmt(total)}</span>
       </div>
@@ -107,6 +132,24 @@ export const Timeline: React.FC<TimelineProps> = ({ project, model, currentTime,
         </div>
 
         <div className="flex items-center gap-3 text-xs">
+          <button
+            onClick={onPrecache}
+            disabled={precache.status === 'running'}
+            className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white disabled:hover:text-slate-400"
+            title="Map tiles along the camera path are loaded in the background so playback and export run smoothly. Click to load them again."
+          >
+            {precache.status === 'running' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" /> Preparing map {precache.total ? Math.round((precache.done / precache.total) * 100) : 0}%
+              </>
+            ) : precache.status === 'done' ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Map ready
+              </>
+            ) : (
+              <>Prepare map</>
+            )}
+          </button>
           <label className="flex items-center gap-2 text-slate-400">
             Travel time
             <input type="range" min={4} max={90} step={1} value={project.durationSeconds} onChange={(e) => onUpdateProject((p) => ({ ...p, durationSeconds: Number(e.target.value) }))} className="w-32" />

@@ -197,6 +197,7 @@ Films exactly one saved view. Frame the map and press **Use this view**.
 - Press **Play** or `Space`. Click or drag on the timeline to scrub. `←` and `→` step one frame, `Shift` with the arrows steps one second.
 - **Travel time** is the time the line takes to travel, without pauses. The total length you see on the right adds marker pauses, transport-change pauses and the start and end moves.
 - **0.5×, 1×, 2×** change only the speed of the preview. They never change the exported video.
+- **Prepare map / Map ready**: a moment after you stop editing, the app quietly loads all map tiles along the camera path, so playback is smooth and the export is faster. The status is shown next to *Travel time*; click it to load the tiles again. It pauses while you play, and the export finishes it before rendering if needed.
 - **Loop** repeats the preview.
 - The aspect ratio buttons (16:9, 9:16, 1:1) reshape the stage.
 
@@ -268,6 +269,7 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 | **Roads do not follow roads** | The routing service may be busy or unreachable. Wait and press *Roads* again, or use *Smooth*. |
 | **The flight goes the long way** | Make sure the leg's path shape is *Flight arc*. Arcs always take the shortest route. |
 | **There is no Include sound option** | Your browser cannot encode audio. Use a current Chrome or Edge. |
+| **Playback stutters or shows blank areas** | Wait for *Map ready* next to *Travel time* before playing; the tiles along the route are then loaded. |
 | **Export is slow or stops** | Keep the tab visible, close other heavy tabs, and try a lower resolution or frame rate first. |
 | **A photo does not show** | The image address must be reachable from your browser and allow other sites to use it. |
 | **The start script says the port is in use** | Choose another port: `start.ps1 -Port 8080` or `start.sh --port 8080`. |

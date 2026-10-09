@@ -19,6 +19,7 @@ By **Geekatplay Studio** · Vladimir Chopine
 - **Maps that look good.** Crisp vector basemaps (light, dark, streets, bright, fiord, treasure map), satellite and topographic, with optional 3D terrain and hillshade. No API keys needed.
 - **Sound.** A synthesised engine or wind bed per transport, a whoosh at every transport change and a chime at every stop, optionally mixed into the exported video.
 - **Frame-exact export.** H.264 MP4 at 720p to 4K, in landscape, vertical or square, at 24, 30 or 60 fps. Every frame is rendered and encoded on your machine, so the result never depends on how fast your computer is.
+- **Smooth playback.** Map tiles along the camera path are loaded in the background, so playback never waits on the network, and the moving symbol is drawn in the same frame as the camera.
 - **Built-in help.** A guide and keyboard shortcuts one click away.
 
 ## Screenshots

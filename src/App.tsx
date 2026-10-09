@@ -55,6 +55,8 @@ export const App: React.FC = () => {
   }, [project]);
   const [historyLen, setHistoryLen] = useState(0);
   const timeRef = useRef(0);
+  const lastUiRef = useRef(0);
+  const lastTelRef = useRef<ReturnType<MapFrameApi['renderFrame']> | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
 
   const model = useMemo(() => buildRouteModel(project), [project.segments, project.waypoints, project.durationSeconds, project.camera, project.stillAtStart, project.stillAtEnd]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -142,13 +144,19 @@ export const App: React.FC = () => {
         }
       }
       timeRef.current = t;
-      setCurrentTime(t);
+      // the map is drawn every frame; React (timeline text, panels) only ~10 times a second
+      if (stop || now - lastUiRef.current > 100) {
+        lastUiRef.current = now;
+        setCurrentTime(t);
+      }
       const tel = apiRef.current?.renderFrame(t);
+      lastTelRef.current = tel ?? null;
       if (tel && p.soundEnabled) {
         const seg = p.segments[tel.currentSegmentIndex];
         if (seg) audioEngine.updateEngineSound(seg.transportMode, tel.phase === 'travel', tel.speedKmh);
       }
       if (stop) {
+        setCurrentTime(t);
         setIsPlaying(false);
         return;
       }
@@ -168,13 +176,53 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!isPlaying) return;
     const id = window.setInterval(() => {
-      const tel = apiRef.current?.renderFrame(timeRef.current);
-      const wp = tel?.activeWaypoint?.id || null;
+      const wp = lastTelRef.current?.activeWaypoint?.id || null;
       if (wp && wp !== lastCardRef.current && projectRef.current.soundEnabled) audioEngine.playWaypointChime();
       lastCardRef.current = wp;
     }, 120);
     return () => window.clearInterval(id);
   }, [isPlaying]);
+
+  // ------------------------------------------------------------- tile precache
+  const [precacheState, setPrecacheState] = useState<{ status: 'idle' | 'running' | 'done'; done: number; total: number; key: string }>({ status: 'idle', done: 0, total: 0, key: '' });
+  const isPlayingRef = useRef(isPlaying);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+  const precacheAbortRef = useRef<AbortController | null>(null);
+  const precacheKey = JSON.stringify([project.segments.map((s) => [s.id, s.coordinates.length, s.transportMode, s.speedKmh]), project.waypoints.map((w) => [w.lng, w.lat, w.dwellTime]), project.camera, project.durationSeconds, project.stillAtStart, project.stillAtEnd, project.mapTheme, project.terrain3D, project.terrainExaggeration, project.hillshade, project.aspectRatio]);
+
+  const runPrecache = useCallback(async (key: string, shouldPause?: () => boolean) => {
+    const api = apiRef.current;
+    if (!api) return;
+    precacheAbortRef.current?.abort();
+    const abort = new AbortController();
+    precacheAbortRef.current = abort;
+    setPrecacheState({ status: 'running', done: 0, total: 0, key });
+    try {
+      await api.precache({
+        signal: abort.signal,
+        shouldPause,
+        onProgress: (done, total) => {
+          if (!abort.signal.aborted) setPrecacheState({ status: 'running', done, total, key });
+        },
+      });
+      if (!abort.signal.aborted) setPrecacheState((p) => ({ ...p, status: 'done', key }));
+    } catch (err) {
+      console.warn('Precache failed', err);
+      if (!abort.signal.aborted) setPrecacheState({ status: 'idle', done: 0, total: 0, key: '' });
+    }
+  }, []);
+
+  // warm the cache in the background a moment after the trip stops changing (paused during playback)
+  useEffect(() => {
+    if (exportProgress.isExporting || model.totalKm <= 0) return;
+    if (precacheState.key === precacheKey && precacheState.status !== 'idle') return;
+    const id = window.setTimeout(() => runPrecache(precacheKey, () => isPlayingRef.current), 1500);
+    return () => window.clearTimeout(id);
+  }, [precacheKey, model.totalKm, exportProgress.isExporting, precacheState.key, precacheState.status, runPrecache]);
+
+  useEffect(() => () => precacheAbortRef.current?.abort(), []);
 
   // ------------------------------------------------------------- road routing
   useEffect(() => {
@@ -505,6 +553,20 @@ export const App: React.FC = () => {
       await new Promise((r) => setTimeout(r, 100));
       api.renderFrame(0);
       await api.settle(4000);
+      // load every tile along the camera path first, so frames don't wait on the network one by one
+      const exportKey = JSON.stringify([precacheKey, aspect]);
+      if (!(precacheState.status === 'done' && precacheState.key === precacheKey && project.aspectRatio === aspect)) {
+        precacheAbortRef.current?.abort();
+        const pre = new AbortController();
+        precacheAbortRef.current = pre;
+        abort.signal.addEventListener('abort', () => pre.abort());
+        await api.precache({
+          signal: pre.signal,
+          onProgress: (done, total) => setExportProgress((p) => ({ ...p, statusText: `Loading map tiles along the route… ${total ? Math.round((done / total) * 100) : 0}%` })),
+        });
+        if (abort.signal.aborted) throw new Error('Export cancelled.');
+        setPrecacheState({ status: 'done', done: 1, total: 1, key: exportKey });
+      }
       let audio: { samples: Float32Array; sampleRate: number } | undefined;
       if (withSound) {
         setExportProgress((p) => ({ ...p, statusText: 'Composing the soundtrack…' }));
@@ -668,6 +730,9 @@ export const App: React.FC = () => {
         project={project}
         model={model}
         currentTime={currentTime}
+        liveTimeRef={timeRef}
+        precache={precacheState.key === precacheKey ? precacheState : { status: 'idle', done: 0, total: 0, key: '' }}
+        onPrecache={() => runPrecache(precacheKey, () => isPlayingRef.current)}
         isPlaying={isPlaying}
         onSeek={seek}
         onTogglePlay={togglePlay}
