@@ -54,7 +54,7 @@ The app opens with a sample trip so you can press play straight away.
 | **Top bar** | Project menu (templates, new trip, import, open, save, reverse route), project name, tools (**Preview**, **Draw route**, **Add marker**, undo, frame the whole route), place search, aspect ratio, help, sound switch and **Export video**. |
 | **Left panel** | Four tabs: **Route** (legs and vehicles), **Markers**, **Camera** and **Style**. |
 | **Map stage** | Your video frame. It always has the aspect ratio you picked, so what you see is what you export. |
-| **Timeline** | Scrubber with one coloured block per leg, white blocks for pauses, round buttons for markers, play controls, travel time and preview speed. |
+| **Timeline** | Scrubber with one coloured block per leg, white blocks for pauses, round buttons for markers, play controls, map-preparation status, Auto / Fixed length with pace or travel time, and preview speed. |
 
 ## 3. Draw a route
 
@@ -113,7 +113,7 @@ At every transport change the line **pauses for a moment while the camera glides
 
 ### Edit a leg
 
-Select a leg in the Route tab to change its **Vehicle**, **Path shape**, **Speed** (it decides how much of the total time the leg gets), **Line colour**, **Width**, **Solid, dashed or dotted** style and **Glow**. Use the arrows to reorder legs, the target icon to jump to a leg in the timeline, and the bin to delete it.
+Select a leg in the Route tab to change its **Vehicle**, **Path shape**, **Speed** (higher than the transport's normal speed makes the leg quicker, lower makes it slower; the leg list shows the seconds each leg takes), **Line colour**, **Width**, **Solid, dashed or dotted** style and **Glow**. Use the arrows to reorder legs, the target icon to jump to a leg in the timeline, and the bin to delete it.
 
 ## 5. Markers, pauses and story cards
 
@@ -143,7 +143,7 @@ The camera has three modes.
 
 The camera stays with the symbol. Settings:
 
-- **Zoom**: *Auto* frames every leg on its own, from the transport, its speed and the length of the leg: walking is filmed very close, cars and buses a little further out, trains and boats wider and flights wide. Fast legs in a short video are framed a bit wider so the map does not rush past. Or set a fixed zoom yourself, or click **Use the map's zoom** to copy what you see.
+- **Zoom**: *Auto* frames every leg on its own, from the transport, its speed and the length of the leg: walking is filmed very close, cars and buses a little further out, trains and boats wider and flights wide. Very long legs, and hurried legs in a *Fixed length* video, are framed a bit wider so the map does not rush past. Or set a fixed zoom yourself, or click **Use the map's zoom** to copy what you see.
 - **Zoom per transport**: *Closer, Same, Wider, Widest* fine-tunes the framing of each transport.
 - **Pause at transport changes**: how long the line waits while the camera glides between framings.
 - **Start and end**: *Whole route* opens on the full trip and zooms in, or pulls back to the full trip at the end. *Close* starts and ends on the symbol.
@@ -272,7 +272,7 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 | **Roads do not follow roads** | The routing service may be busy or unreachable. Wait and press *Roads* again, or use *Smooth*. |
 | **The flight goes the long way** | Make sure the leg's path shape is *Flight arc*. Arcs always take the shortest route. |
 | **There is no Include sound option** | Your browser cannot encode audio. Use a current Chrome or Edge. |
-| **Playback stutters or shows blank areas** | Wait for *Map ready* next to *Travel time* before playing; the tiles along the route are then loaded. |
+| **Playback stutters or shows blank areas** | Wait for *Map ready* below the timeline before playing; the tiles along the route are then loaded. |
 | **Export is slow or stops** | Keep the tab visible, close other heavy tabs, and try a lower resolution or frame rate first. |
 | **A photo does not show** | The image address must be reachable from your browser and allow other sites to use it. |
 | **The start script says the port is in use** | Choose another port: `start.ps1 -Port 8080` or `start.sh --port 8080`. |

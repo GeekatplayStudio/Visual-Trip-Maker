@@ -80,7 +80,7 @@ The full guide, with screenshots and a worked example, is in **[docs/USER_MANUAL
 
 ## How it works
 
-The route is split into legs. Each leg has a transport, a path shape, a speed and a style. The timeline is computed from the legs: travel time is shared out by distance and speed, marker pauses and transport-change pauses are added, and optional intro and outro moves are put around it. The camera, the symbol and the story cards are all pure functions of the time on that timeline. That is why the preview and the exported video match exactly, and why the camera moves are perfectly smooth at any frame rate.
+The route is split into legs. Each leg has a transport, a path shape, a speed and a style. The timeline is computed from the legs: each transport has a natural framing (walking close, driving a little out, flying wide), and every leg gets time in proportion to the screens of ground it crosses at that framing, so all vehicles move at the same on-screen pace. Marker pauses and transport-change pauses are added, and optional intro and outro moves are put around it. The camera, the symbol and the story cards are all pure functions of the time on that timeline. That is why the preview and the exported video match exactly, and why the camera moves are perfectly smooth at any frame rate.
 
 ```
 src/
@@ -93,6 +93,7 @@ src/
     Header.tsx, ExportModal.tsx, HelpModal.tsx
   services/
     geoUtils.ts              route model, timeline, great-circle arcs, GPX / KML, road routing
+    framing.ts               per-transport framing, default speeds and pace
     cameraDirector.ts        camera pose for any time on the timeline
     mapStyles.ts             basemap styles and terrain source
     markerIcons.ts           canvas-drawn markers and vehicle symbols
