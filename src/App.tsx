@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AspectRatio, CameraSettings, EditTool, ExportProgress, ResolutionPreset, RouteProject, RouteSegment, TransportMode, Waypoint } from './types';
 import { DEFAULT_CAMERA, PRESET_PROJECTS, createEmptyProject, makeSegment, makeWaypoint, transportInfo, uid } from './services/presets';
-import { buildRouteModel, defaultRoutingFor, fetchOSRMRoute, osrmProfileFor, rebuildSegment, snapToRoute, unwrapLng } from './services/geoUtils';
+import { buildRouteModel, defaultRoutingFor, fetchOSRMRoute, osrmProfileFor, rebuildSegment, reconnectLegs, snapToRoute, unwrapLng } from './services/geoUtils';
 import { audioEngine } from './services/audioEngine';
 import { exportVideo, getExportDimensions } from './services/videoExporter';
 import { synthesizeSoundtrack } from './services/soundtrack';
@@ -312,12 +312,21 @@ export const App: React.FC = () => {
   }, [activeSegmentIndex, updateSegment]);
 
   const handleMovePoint = useCallback((segIdx: number, idx: number, lng: number, lat: number) => {
-    updateSegment(segIdx, (s) => {
+    commit((p) => {
+      const segs = p.segments.slice();
+      const s = segs[segIdx];
+      if (!s) return p;
       const ref = s.points[idx - 1] || s.points[idx + 1] || s.points[idx];
-      const l = ref ? unwrapLng(ref[0], lng) : lng;
-      return rebuildSegment({ ...s, points: s.points.map((p, i) => (i === idx ? [l, lat] : p)), roadSnapped: false });
+      const pt: [number, number] = [ref ? unwrapLng(ref[0], lng) : lng, lat];
+      segs[segIdx] = rebuildSegment({ ...s, points: s.points.map((q, i) => (i === idx ? pt : q)), roadSnapped: false });
+      // a leg's first and last points are shared with its neighbours: move them together
+      const prev = segs[segIdx - 1];
+      if (idx === 0 && prev?.points.length) segs[segIdx - 1] = rebuildSegment({ ...prev, points: [...prev.points.slice(0, -1), pt], roadSnapped: false });
+      const next = segs[segIdx + 1];
+      if (idx === s.points.length - 1 && next?.points.length) segs[segIdx + 1] = rebuildSegment({ ...next, points: [pt, ...next.points.slice(1)], roadSnapped: false });
+      return { ...p, segments: segs };
     });
-  }, [updateSegment]);
+  }, [commit]);
 
   useEffect(() => {
     deletePointRef.current = (segIdx: number, idx: number) => {
@@ -433,7 +442,12 @@ export const App: React.FC = () => {
   }, [commit, project.segments.length]);
 
   const handleDeleteSegment = useCallback((idx: number) => {
-    commit((p) => (p.segments.length <= 1 ? { ...p, segments: [rebuildSegment({ ...p.segments[0], points: [], roadSnapped: false })] } : { ...p, segments: p.segments.filter((_, i) => i !== idx) }));
+    commit((p) => {
+      if (p.segments.length <= 1) return { ...p, segments: [rebuildSegment({ ...p.segments[0], points: [], roadSnapped: false })] };
+      // skip that destination: the next leg now starts where the previous one ends
+      const origin = p.segments.find((s) => s.points.length)?.points[0];
+      return { ...p, segments: reconnectLegs(p.segments.filter((_, i) => i !== idx), origin) };
+    });
     setActiveSegmentIndex((i) => Math.max(0, Math.min(i, project.segments.length - 2)));
   }, [commit, project.segments.length]);
 

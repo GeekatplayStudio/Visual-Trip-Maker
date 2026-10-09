@@ -6,7 +6,7 @@ import { MOVEMENT_INFO, legViewKm } from '../services/cameraDirector';
 import { THEMES } from '../services/mapStyles';
 import { MARKER_COLORS, MARKER_ICONS, iconGlyph } from '../services/markerIcons';
 import { PlaceDetails } from './PlaceDetails';
-import { FLYING_MODES, rebuildSegment, timelineLayout, type RouteModel } from '../services/geoUtils';
+import { FLYING_MODES, rebuildSegment, reconnectLegs, timelineLayout, type RouteModel } from '../services/geoUtils';
 
 export type SidebarTab = 'route' | 'markers' | 'camera' | 'style';
 
@@ -81,6 +81,20 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
   const seg = project.segments[activeSegmentIndex];
   const layout = timelineLayout(model);
 
+  /** Name of the marker at (or very near) a point, to show legs as "A → B". */
+  const placeAt = (pt?: [number, number]) => {
+    if (!pt) return null;
+    let best: { title: string; d: number } | null = null;
+    for (const w of project.waypoints) {
+      if (/^pause$/i.test(w.title)) continue;
+      const dLat = (w.lat - pt[1]) * 111;
+      const dLng = (((w.lng - pt[0] + 540) % 360) - 180) * 111 * Math.cos((pt[1] * Math.PI) / 180);
+      const d = Math.hypot(dLat, dLng);
+      if (!best || d < best.d) best = { title: w.title, d };
+    }
+    return best && best.d < 15 ? best.title : null;
+  };
+
   const tabs: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
     { id: 'route', icon: <Route className="w-4 h-4" />, label: 'Route' },
     { id: 'markers', icon: <MapPin className="w-4 h-4" />, label: 'Markers' },
@@ -95,9 +109,10 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
     const j = idx + dir;
     if (j < 0 || j >= project.segments.length) return;
     onCommitProject((prev) => {
+      const origin = prev.segments.find((s) => s.points.length)?.points[0];
       const segs = prev.segments.slice();
       [segs[idx], segs[j]] = [segs[j], segs[idx]];
-      return { ...prev, segments: segs };
+      return { ...prev, segments: reconnectLegs(segs, origin) };
     });
     onSelectSegment(j);
   };
@@ -141,14 +156,19 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold text-white truncate">{s.title}</div>
+                        {s.points.length >= 2 && (placeAt(s.points[0]) || placeAt(s.points[s.points.length - 1])) && (
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {placeAt(s.points[0]) ?? '…'} → {placeAt(s.points[s.points.length - 1]) ?? '…'}
+                          </div>
+                        )}
                         <div className="text-[10px] text-slate-500 font-mono">
                           {s.lengthKm < 10 ? s.lengthKm.toFixed(1) : s.lengthKm.toFixed(0)} km · {(model.segments[idx]?.durationSec ?? 0).toFixed(1)} s{routingBusy.has(s.id) ? ' · routing…' : ''}
                         </div>
                       </div>
                       {active && (
                         <div className="flex flex-col -my-1">
-                          <button className="text-slate-500 hover:text-white p-0.5" onClick={(e) => { e.stopPropagation(); moveSegment(idx, -1); }} title="Move up"><ChevronUp className="w-3.5 h-3.5" /></button>
-                          <button className="text-slate-500 hover:text-white p-0.5" onClick={(e) => { e.stopPropagation(); moveSegment(idx, 1); }} title="Move down"><ChevronDown className="w-3.5 h-3.5" /></button>
+                          <button className="text-slate-500 hover:text-white p-0.5" onClick={(e) => { e.stopPropagation(); moveSegment(idx, -1); }} title="Travel this leg earlier (the route reconnects)"><ChevronUp className="w-3.5 h-3.5" /></button>
+                          <button className="text-slate-500 hover:text-white p-0.5" onClick={(e) => { e.stopPropagation(); moveSegment(idx, 1); }} title="Travel this leg later (the route reconnects)"><ChevronDown className="w-3.5 h-3.5" /></button>
                         </div>
                       )}
                       {range && (

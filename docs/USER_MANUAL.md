@@ -113,7 +113,11 @@ At every transport change the line **pauses for a moment while the camera glides
 
 ### Edit a leg
 
-Select a leg in the Route tab to change its **Vehicle**, **Path shape**, **Speed** (higher than the transport's normal speed makes the leg quicker, lower makes it slower; the leg list shows the seconds each leg takes), **Line colour**, **Width**, **Solid, dashed or dotted** style and **Glow**. Use the arrows to reorder legs, the target icon to jump to a leg in the timeline, and the bin to delete it.
+Select a leg in the Route tab to change its **Vehicle**, **Path shape**, **Speed** (higher than the transport's normal speed makes the leg quicker, lower makes it slower; the leg list shows the seconds each leg takes), **Line colour**, **Width**, **Solid, dashed or dotted** style and **Glow**. Each leg in the list shows where it goes, for example *Paris → Zürich*, using the markers at its ends.
+
+**Reorder the trip** with the arrows on the selected leg. Think of a leg as "travel to its destination": moving a leg changes the order in which you visit the places, and the route reconnects on the map. With stops A, B and C, moving the leg to C above the leg to B turns A → B → C into A → C → B. A leg that now starts somewhere else keeps its destination and is routed again from its new start (any extra shaping points on it are dropped). **Deleting** a leg skips that destination the same way, so the route stays connected. Dragging the point where two legs meet moves both.
+
+Use the target icon to jump to a leg in the timeline, and the bin to delete it.
 
 ## 5. Markers, pauses and story cards
 

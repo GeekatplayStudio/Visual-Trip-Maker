@@ -160,6 +160,27 @@ export function rebuildSegment(seg: RouteSegment, overrideCoords?: [number, numb
   return { ...seg, coordinates, lengthKm: calculatePathLengthKm(coordinates) };
 }
 
+const samePoint = (a: [number, number], b: [number, number]) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+
+/**
+ * Chain legs so each one starts where the previous one ends. A leg is "travel to its destination"
+ * (its last point): after legs are reordered or removed, a leg whose start moved keeps only its
+ * destination and is routed again from the new start, so A→B, B→C reordered becomes A→C, C→B.
+ */
+export function reconnectLegs(segments: RouteSegment[], origin?: [number, number]): RouteSegment[] {
+  let prevEnd: [number, number] | undefined = origin ?? segments.find((s) => s.points.length)?.points[0];
+  return segments.map((s) => {
+    let out = s;
+    if (prevEnd && s.points.length && !samePoint(s.points[0], prevEnd)) {
+      const start: [number, number] = [unwrapLng(s.points[s.points.length - 1][0], prevEnd[0]), prevEnd[1]];
+      const points: [number, number][] = s.points.length >= 2 ? [start, s.points[s.points.length - 1]] : [start];
+      out = rebuildSegment({ ...s, points, roadSnapped: false });
+    }
+    if (out.points.length) prevEnd = out.points[out.points.length - 1];
+    return out;
+  });
+}
+
 export function defaultRoutingFor(mode: TransportMode): RoutingMode {
   if (FLYING_MODES.includes(mode) && mode !== 'helicopter' && mode !== 'balloon') return 'arc';
   if (ROAD_MODES.includes(mode) && mode !== 'hiker') return 'road';
