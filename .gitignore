@@ -1,0 +1,30 @@
+# dependencies and build output
+node_modules
+dist
+dist-ssr
+*.tsbuildinfo
+
+# runtime state written by the start / stop scripts
+.run
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# local files
+*.local
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# editors and tools
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.sw?
+
+# private research notes
+prd.txt

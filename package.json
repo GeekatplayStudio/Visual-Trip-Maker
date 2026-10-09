@@ -1,0 +1,41 @@
+{
+  "name": "visual-trip-maker",
+  "version": "1.0.0",
+  "description": "Draw a trip on a map and export a smooth animated route video, fully in your browser.",
+  "author": "Geekatplay Studio - Vladimir Chopine",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GeekatplayStudio/Visual-Trip-Maker.git"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.4.0",
+    "@types/three": "^0.186.0",
+    "lucide-react": "^1.52.0",
+    "maplibre-gl": "^6.13.0",
+    "mp4-muxer": "^5.2.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  }
+}
