@@ -128,8 +128,9 @@ Press **Add marker** (or `M`) and click on the route. Select a marker in the Mar
 | **Icon and colour** | 25 icons and any colour. |
 | **Pause at this stop** | 0 to 10 seconds. The line waits while the card is shown. |
 | **Pop in on arrival / Always visible** | Reveal the marker when the line reaches it, or show it from the start. |
-| **Show story card** | A card with the title, subtitle and photo appears at the stop. |
-| **Photo URL** | Address of an image. For a polaroid marker the photo is shown on the marker, and on the card. |
+| **Show story card** | A card with the title, subtitle, description and photo appears at the stop. |
+| **Photo** | Optional. **Upload photo** (or drop or paste an image), or use a photo address. Phone photos are turned upright and resized automatically. **Frame** opens an editor: drag to choose what shows, zoom with the slider or the mouse wheel, and see the result on the story card and the polaroid marker. |
+| **Description** | Optional, up to 300 characters, shown on the story card. **Suggest description** looks the place up on Wikipedia and Wikivoyage from the marker's title and position (a misspelled name still works) and picks one or two of the most interesting sentences. **Another** cycles through other suggestions, **Use its photo** takes the article's photo, and the link shows the source. You can edit the text freely. |
 
 Drag a marker to move it. Markers placed away from the line trigger at the nearest point of the line. **Marker size** and **Labels next to markers** are at the bottom of the Markers tab.
 
@@ -234,7 +235,7 @@ Open the **Project** menu:
 - **Templates**: *Grand European Trip*, *Pacific Coast Highway* and *Tokyo to Mount Fuji* show different cameras, maps and transports.
 - **Import GPX / KML track** turns a recorded track from a watch, bike computer or phone into a leg, including any waypoints in the file.
 - **Open project file** opens a saved `.visualtrip.json` project. It also opens `.mapanim` project files from other map-animation tools; if the file has several scenes you choose which one to import.
-- **Save project file** downloads your project, including photo links, for backup or sharing.
+- **Save project file** downloads your project, including uploaded photos, for backup or sharing.
 - **Reverse route** makes the route start at the other end.
 
 Your work is saved automatically in this browser. Clearing the browser's site data removes it, so save a project file for anything important.
@@ -261,7 +262,8 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 - **Short and punchy.** For social media use 9:16, *Fast* pace (or *Fixed length* of 10 to 20 seconds) and pauses of 1 to 2 seconds.
 - **Add a marker at every transport change** (an airport, a harbour, a station) with a 1.5 to 2 second pause and a story card. It gives the viewer time to understand the change.
 - **Draw coarse, then refine.** Place a few points, then drag them. Roads and curves do the rest.
-- **Use your own photos.** Upload photos to any image host and paste the address into *Photo URL*.
+- **Use your own photos.** Upload them straight from your computer or phone, then use *Frame* to put the subject in view.
+- **Give the viewer context.** *Suggest description* adds a short fact about each stop in one click; trim it to one sentence for short videos.
 - **Test before you render.** Scrub through the timeline; high resolutions take a while to export.
 
 ## 14. Troubleshooting
@@ -274,7 +276,8 @@ Your work is saved automatically in this browser. Clearing the browser's site da
 | **There is no Include sound option** | Your browser cannot encode audio. Use a current Chrome or Edge. |
 | **Playback stutters or shows blank areas** | Wait for *Map ready* below the timeline before playing; the tiles along the route are then loaded. |
 | **Export is slow or stops** | Keep the tab visible, close other heavy tabs, and try a lower resolution or frame rate first. |
-| **A photo does not show** | The image address must be reachable from your browser and allow other sites to use it. |
+| **A photo does not show** | Upload the photo instead of using an address: an address must be reachable from your browser and allow other sites to use it. HEIC photos from iPhones may need converting to JPEG first. |
+| **Suggest description finds nothing or the wrong place** | Give the marker a more specific title, or move it onto the place. You can always type your own text. |
 | **The start script says the port is in use** | Choose another port: `start.ps1 -Port 8080` or `start.sh --port 8080`. |
 | **Everything vanished** | Browser data was cleared. Keep saved project files as a backup. |
 

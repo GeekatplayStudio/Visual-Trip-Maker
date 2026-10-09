@@ -99,7 +99,14 @@ export interface Waypoint {
   icon: string;
   /** Marker colour (hex). */
   color: string;
+  /** http(s) URL, data: URL, or `local:<id>` for an uploaded photo kept in browser storage. */
   photoUrl?: string;
+  /** Framing of the photo: focus point (0..1) and zoom (1 = just covering the frame). */
+  photoCrop?: { x: number; y: number; zoom: number };
+  /** Short description of the place, shown on the story card. */
+  description?: string;
+  /** Where the description came from, for attribution. */
+  descriptionSource?: { name: string; title: string; url: string };
   /** Show a story card overlay when the head reaches this marker. */
   showCard: boolean;
 }

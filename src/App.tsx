@@ -669,6 +669,7 @@ export const App: React.FC = () => {
           onQuickMove={quickMove}
           onUseCurrentZoom={useCurrentZoom}
           cameraFree={cameraFree}
+          onToast={showToast}
         />
 
         <main className="flex-1 min-w-0 flex items-center justify-center bg-[#05080e] p-3 relative">

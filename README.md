@@ -14,7 +14,8 @@ By **Geekatplay Studio** · Vladimir Chopine
 - **Change transport along the trip.** One continuous route made of legs: drive to the airport, fly, take a taxi, board a train. Pick the next transport while drawing, or split a leg from any point. The video pauses at each change while the camera glides to the new framing.
 - **Shortest flight paths.** Great-circle arcs that take the short way round the globe, including across the date line.
 - **15 transports.** Car, 4x4, camper, bus, motorcycle, bicycle, on foot, two trains, two planes, helicopter, balloon, boat and ferry, each with shaded symbols, shadows and motion trails (contrails, wakes, smoke, dust).
-- **Markers and story cards.** Pins, flags, dots, polaroid photos and text, 25 icons, any colour. Pop in on arrival, pause the animation, show a card with title, subtitle and photo.
+- **Markers and story cards.** Pins, flags, dots, polaroid photos and text, 25 icons, any colour. Pop in on arrival, pause the animation, show a card with title, subtitle, description and photo.
+- **Photos and place descriptions.** Upload a photo and frame it (drag and zoom), or use an address. One click suggests a short, interesting description of the place from Wikipedia or Wikivoyage, even from a misspelled name.
 - **Even pacing.** Every vehicle crosses the frame at the same comfortable pace (Slow, Normal or Fast), and the video length follows from the route, or set a fixed length.
 - **Camera director.** Follow the line with automatic per-leg framing (walking close, driving a little out, flying wide), zoom per transport, look-ahead, steadiness, tilt, north-up or direction of travel), glide between two saved shots, or hold a fixed view. Intro zoom-in and outro pull-back included.
 - **Maps that look good.** Crisp vector basemaps (light, dark, streets, bright, fiord, treasure map), satellite and topographic, with optional 3D terrain and hillshade. No API keys needed.
@@ -101,6 +102,9 @@ src/
     soundtrack.ts            offline soundtrack synthesis
     videoExporter.ts         WebCodecs H.264 / AAC encoder and MP4 muxer
     threeVehicles.ts         procedural 3D vehicle models
+    photoStore.ts            uploaded photos in browser storage
+    photoCrop.ts             photo framing (focus point and zoom)
+    placeInfo.ts             place descriptions from Wikipedia and Wikivoyage
     presets.ts               templates and defaults
 docs/                        user manual and screenshots
 scripts/                     install, build, start and stop scripts
@@ -110,7 +114,7 @@ Built with React, TypeScript, Vite, Tailwind CSS, MapLibre GL JS, Three.js, Turf
 
 ## Privacy
 
-Everything runs in your browser. Your routes, photos and videos are never uploaded. Projects are stored in your browser's local storage, and you can save them as files. The app does contact public services to load map tiles, terrain, fonts, road routing and place search (listed below), and it loads any photo URLs you enter.
+Everything runs in your browser. Your routes, photos and videos are never uploaded. Projects are stored in your browser's local storage and uploaded photos in its IndexedDB storage, and you can save everything as one project file. The app does contact public services to load map tiles, terrain, fonts, road routing, place search and place descriptions (listed below), and it loads any photo addresses you enter.
 
 ## Browser support
 
@@ -118,7 +122,7 @@ Current Chrome and Edge give you everything, including MP4 export with sound. Br
 
 ## Credits and data
 
-Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [OpenMapTiles](https://openmaptiles.org/), served by [OpenFreeMap](https://openfreemap.org/). Satellite imagery © Esri, Maxar, Earthstar Geographics. Topographic tiles © [OpenTopoMap](https://opentopomap.org/) (CC-BY-SA). Elevation from Mapzen / [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/). Road routing by the public [OSRM](https://project-osrm.org/) demo server and place search by [Nominatim](https://nominatim.org/). Template photos from [Unsplash](https://unsplash.com/). These services have usage policies, so please be considerate with heavy use.
+Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [OpenMapTiles](https://openmaptiles.org/), served by [OpenFreeMap](https://openfreemap.org/). Satellite imagery © Esri, Maxar, Earthstar Geographics. Topographic tiles © [OpenTopoMap](https://opentopomap.org/) (CC-BY-SA). Elevation from Mapzen / [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/). Road routing by the public [OSRM](https://project-osrm.org/) demo server and place search by [Nominatim](https://nominatim.org/). Place descriptions and photos from [Wikipedia](https://www.wikipedia.org/) and [Wikivoyage](https://www.wikivoyage.org/) (CC BY-SA; photos under their own licenses, see the linked article). Template photos from [Unsplash](https://unsplash.com/). These services have usage policies, so please be considerate with heavy use.
 
 ## License
 

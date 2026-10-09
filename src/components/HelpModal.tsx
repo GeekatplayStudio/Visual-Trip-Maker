@@ -45,7 +45,8 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>Click <b>Add marker</b> (<kbd>M</kbd>) and click on the route. A marker can be a pin, dot, flag, polaroid photo or plain text, with an icon and colour. <b>Pop in on arrival</b> keeps it hidden until the line reaches it.</p>
-        <p><b>Pause at this stop</b> stops the line for a moment, and <b>Show story card</b> shows a card with title, subtitle and photo. To pause without any sign, click a point of the route and choose <b>Pause here</b>.</p>
+        <p><b>Photo</b>: upload, drop or paste a photo (or use a photo address), then <b>Frame</b> it: drag to choose what shows and zoom in. <b>Description</b>: type a line about the place, or press <b>Suggest description</b> to pull a short, interesting fact from Wikipedia or Wikivoyage, using the marker's title and position.</p>
+        <p><b>Pause at this stop</b> stops the line for a moment, and <b>Show story card</b> shows a card with title, subtitle, description and photo. To pause without any sign, click a point of the route and choose <b>Pause here</b>.</p>
       </>
     ),
   },

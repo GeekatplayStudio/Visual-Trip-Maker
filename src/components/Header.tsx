@@ -5,6 +5,7 @@ import { PRESET_LIST, PRESET_PROJECTS, makeSegment, makeWaypoint, uid } from '..
 import { parseGPX, parseKML } from '../services/geoUtils';
 import { themeInfo } from '../services/mapStyles';
 import { importMapanim, isMapanimFile } from '../services/mapanimImport';
+import { exportPhotos, importPhotos, localizeDataUrl } from '../services/photoStore';
 
 interface HeaderProps {
   project: RouteProject;
@@ -78,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ project, editTool, onEditToolCha
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    file.text().then((txt) => {
+    file.text().then(async (txt) => {
       try {
         const raw = JSON.parse(txt) as unknown;
         if (isMapanimFile(raw)) {
@@ -90,12 +91,17 @@ export const Header: React.FC<HeaderProps> = ({ project, editTool, onEditToolCha
             sceneIndex = Math.max(0, Math.min(sceneCount - 1, (parseInt(answer, 10) || 1) - 1));
           }
           const res = importMapanim(raw, sceneIndex);
-          onLoadProject(res.project);
+          // keep the embedded photos in browser storage instead of inside the project
+          const waypoints = await Promise.all(
+            res.project.waypoints.map(async (w) => (w.photoUrl?.startsWith('data:') ? { ...w, photoUrl: await localizeDataUrl(w.photoUrl).catch(() => w.photoUrl) } : w)),
+          );
+          onLoadProject({ ...res.project, waypoints });
           onToast(sceneCount > 1 ? `Imported “${res.sceneName}” from the Map Animator file.` : 'Imported the Map Animator project.');
           return;
         }
-        const p = raw as RouteProject;
+        const { photos, ...p } = raw as RouteProject & { photos?: Record<string, string> };
         if (!Array.isArray(p.segments)) throw new Error('bad');
+        if (photos) await importPhotos(photos);
         onLoadProject({ ...PRESET_PROJECTS.european_voyage, ...p, id: uid('project') });
         onToast(`Opened “${p.name}”.`);
       } catch {
@@ -104,8 +110,11 @@ export const Header: React.FC<HeaderProps> = ({ project, editTool, onEditToolCha
     });
   };
 
-  const saveJson = () => {
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+  const saveJson = async () => {
+    // uploaded photos travel inside the project file
+    const photos = await exportPhotos(project.waypoints.map((w) => w.photoUrl || ''));
+    const data = Object.keys(photos).length ? { ...project, photos } : project;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${project.name.replace(/[^\w-]+/g, '_') || 'trip'}.visualtrip.json`;

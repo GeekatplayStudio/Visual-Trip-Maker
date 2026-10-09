@@ -1,5 +1,6 @@
 import type { RouteProject, VehicleTelemetry } from '../types';
 import { iconGlyph, loadImage } from './markerIcons';
+import { CARD_PHOTO_ASPECT, drawCropped } from './photoCrop';
 
 const FONT = '"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif';
 const EMOJI = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
@@ -29,6 +30,28 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+/** Word-wrap into at most `maxLines` lines; the last line is ellipsized. */
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+  const words = text.trim().split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const next = line ? `${line} ${words[i]}` : words[i];
+    if (ctx.measureText(next).width <= maxW || !line) {
+      line = next;
+      continue;
+    }
+    if (lines.length === maxLines - 1) {
+      lines.push(ellipsize(ctx, `${line} ${words.slice(i).join(' ')}`, maxW));
+      return lines;
+    }
+    lines.push(line);
+    line = words[i];
+  }
+  if (line) lines.push(lines.length === maxLines - 1 ? ellipsize(ctx, line, maxW) : line);
+  return lines.slice(0, maxLines);
 }
 
 function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
@@ -71,11 +94,15 @@ export function paintOverlay({ ctx, width, height, project, telemetry, accent, d
     const photo = wp.photoUrl ? photoCache.get(wp.photoUrl) : null;
     const cardW = Math.min(width * 0.86, (vertical ? 300 : 340) * u);
     const pad = 14 * u;
-    const photoH = photo ? cardW * 0.56 : 0;
+    const photoH = photo ? (cardW - pad * 2) / CARD_PHOTO_ASPECT : 0;
     const titleSize = 17 * u;
     const subSize = 12.5 * u;
+    const descSize = 11.5 * u;
     const badgeH = 22 * u;
-    const cardH = pad + badgeH + 10 * u + (photo ? photoH + 10 * u : 0) + titleSize * 1.25 + (wp.subtitle ? subSize * 1.5 : 0) + pad;
+    ctx.font = `500 ${descSize}px ${FONT}`;
+    const descLines = wp.description ? wrapLines(ctx, wp.description, cardW - pad * 2, vertical ? 5 : 4) : [];
+    const descH = descLines.length ? 6 * u + descLines.length * descSize * 1.4 : 0;
+    const cardH = pad + badgeH + 10 * u + (photo ? photoH + 10 * u : 0) + titleSize * 1.25 + (wp.subtitle ? subSize * 1.5 : 0) + descH + pad;
     const cx = width / 2;
     const top = (vertical ? 70 : 28) * u;
 
@@ -120,11 +147,7 @@ export function paintOverlay({ ctx, width, height, project, telemetry, accent, d
       ctx.save();
       roundRect(ctx, pad, y, cardW - pad * 2, photoH, 10 * u);
       ctx.clip();
-      const dw = cardW - pad * 2;
-      const s = Math.max(dw / photo.width, photoH / photo.height);
-      const w2 = photo.width * s;
-      const h2 = photo.height * s;
-      ctx.drawImage(photo, pad + (dw - w2) / 2, y + (photoH - h2) / 2, w2, h2);
+      drawCropped(ctx, photo, pad, y, cardW - pad * 2, photoH, wp.photoCrop);
       ctx.restore();
       y += photoH + 10 * u;
     }
@@ -138,6 +161,13 @@ export function paintOverlay({ ctx, width, height, project, telemetry, accent, d
       ctx.fillStyle = dark ? 'rgba(226,232,240,0.85)' : 'rgba(51,65,85,0.9)';
       ctx.font = `500 ${subSize}px ${FONT}`;
       ctx.fillText(ellipsize(ctx, wp.subtitle, cardW - pad * 2), pad, y + subSize);
+      y += subSize * 1.5;
+    }
+    if (descLines.length) {
+      y += 6 * u;
+      ctx.fillStyle = dark ? 'rgba(203,213,225,0.82)' : 'rgba(71,85,105,0.92)';
+      ctx.font = `500 ${descSize}px ${FONT}`;
+      descLines.forEach((l, i) => ctx.fillText(l, pad, y + descSize + i * descSize * 1.4));
     }
     ctx.restore();
   }

@@ -1,4 +1,6 @@
 import type { MarkerStyle, TransportMode } from '../types';
+import { resolvePhotoSrc } from './photoStore';
+import { POLAROID_PHOTO_ASPECT, drawCropped, type PhotoCrop } from './photoCrop';
 
 export interface MarkerIconDef {
   key: string;
@@ -265,20 +267,24 @@ export function loadImage(url: string): Promise<HTMLImageElement | null> {
   if (!imageCache.has(url)) {
     imageCache.set(
       url,
-      new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
-      }),
+      resolvePhotoSrc(url).then(
+        (src) =>
+          new Promise((resolve) => {
+            if (!src) return resolve(null);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = src;
+          }),
+      ),
     );
   }
   return imageCache.get(url)!;
 }
 
 /** Polaroid photo card with a short pin underneath. */
-export async function renderPhotoMarker(url: string, color: string, pr = 2): Promise<RenderedIcon> {
+export async function renderPhotoMarker(url: string, color: string, crop?: PhotoCrop, pr = 2): Promise<RenderedIcon> {
   const img = await loadImage(url);
   const W = 112;
   const H = 136;
@@ -319,10 +325,7 @@ export async function renderPhotoMarker(url: string, color: string, pr = 2): Pro
   roundRect(ctx, -40, -44, 80, 72, 3);
   ctx.clip();
   if (img) {
-    const s = Math.max(80 / img.width, 72 / img.height);
-    const dw = img.width * s;
-    const dh = img.height * s;
-    ctx.drawImage(img, -dw / 2, -44 + (72 - dh) / 2, dw, dh);
+    drawCropped(ctx, img, -40, -44, 80, 80 / POLAROID_PHOTO_ASPECT, crop);
   } else {
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(-40, -44, 80, 72);

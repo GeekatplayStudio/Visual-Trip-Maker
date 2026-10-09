@@ -5,6 +5,7 @@ import { TRANSPORT_OPTIONS } from '../services/presets';
 import { MOVEMENT_INFO, legViewKm } from '../services/cameraDirector';
 import { THEMES } from '../services/mapStyles';
 import { MARKER_COLORS, MARKER_ICONS, iconGlyph } from '../services/markerIcons';
+import { PlaceDetails } from './PlaceDetails';
 import { FLYING_MODES, rebuildSegment, timelineLayout, type RouteModel } from '../services/geoUtils';
 
 export type SidebarTab = 'route' | 'markers' | 'camera' | 'style';
@@ -35,6 +36,7 @@ interface SidebarProps {
   onQuickMove: (kind: 'reveal' | 'finish' | 'pan') => void;
   onUseCurrentZoom: () => void;
   cameraFree: boolean;
+  onToast: (msg: string) => void;
 }
 
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string; hint?: string }> = ({ on, onChange, label, hint }) => (
@@ -73,7 +75,7 @@ const Section: React.FC<{ title: string; hint?: string; children: React.ReactNod
 );
 
 export const Sidebar: React.FC<SidebarProps> = (p) => {
-  const { project, model, tab, onTabChange, editTool, onEditToolChange, onUpdateProject, onCommitProject, activeSegmentIndex, onSelectSegment, onUpdateSegment, onAddSegment, onDeleteSegment, selectedWaypointId, onSelectWaypoint, onUpdateWaypoint, onDeleteWaypoint, routingBusy, onSeek, onUpdateCamera, onCaptureShot, onShowShot, onQuickMove, onUseCurrentZoom, cameraFree } = p;
+  const { project, model, tab, onTabChange, editTool, onEditToolChange, onUpdateProject, onCommitProject, activeSegmentIndex, onSelectSegment, onUpdateSegment, onAddSegment, onDeleteSegment, selectedWaypointId, onSelectWaypoint, onUpdateWaypoint, onDeleteWaypoint, routingBusy, onSeek, onUpdateCamera, onCaptureShot, onShowShot, onQuickMove, onUseCurrentZoom, cameraFree, onToast } = p;
   const cam = project.camera;
   const usedTransports = Array.from(new Set(project.segments.map((s) => s.transportMode))) as TransportMode[];
   const seg = project.segments[activeSegmentIndex];
@@ -347,8 +349,8 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                               <button onClick={() => onUpdateWaypoint(wp.id, { revealMode: 'on_arrival' })} className={`chip ${wp.revealMode === 'on_arrival' ? 'chip-on' : ''}`}>Pop in on arrival</button>
                               <button onClick={() => onUpdateWaypoint(wp.id, { revealMode: 'always' })} className={`chip ${wp.revealMode === 'always' ? 'chip-on' : ''}`}>Always visible</button>
                             </div>
-                            <Toggle on={wp.showCard} onChange={(v) => onUpdateWaypoint(wp.id, { showCard: v })} label="Show story card" hint="Title, subtitle and photo overlay when arriving" />
-                            <input value={wp.photoUrl || ''} onChange={(e) => onUpdateWaypoint(wp.id, { photoUrl: e.target.value || undefined })} className="field text-xs" placeholder="Photo URL (optional)" />
+                            <Toggle on={wp.showCard} onChange={(v) => onUpdateWaypoint(wp.id, { showCard: v })} label="Show story card" hint="Title, subtitle, description and photo when arriving" />
+                            <PlaceDetails wp={wp} onUpdate={(patch, withHistory) => onUpdateWaypoint(wp.id, patch, withHistory)} onToast={onToast} />
                           </div>
                         )}
                       </div>

@@ -6,6 +6,7 @@ import type { CameraShot, EditTool, RouteProject, TransportMode, VehicleTelemetr
 import { create3DVehicle, type Vehicle3DInstance } from '../services/threeVehicles';
 import { FLYING_MODES, WATER_MODES, interpolateRouteState, sampleAtDistance, type RouteModel } from '../services/geoUtils';
 import { computeCameraPose, type CameraPose } from '../services/cameraDirector';
+import { cropKey } from '../services/photoCrop';
 import { DEM_SOURCE_ID, firstSymbolLayerId, labelLayerIds, loadThemeStyle, themeInfo } from '../services/mapStyles';
 import { SPRITE_LENGTH_PX, renderGlow, renderGroundShadow, renderLegBadge, renderMarkerIcon, renderPhotoMarker, renderVehicleSprite } from '../services/markerIcons';
 import { paintOverlay, preloadPhotos } from '../services/overlayPainter';
@@ -200,10 +201,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
   const syncMarkerImages = (map: maplibregl.Map, proj: RouteProject) => {
     for (const wp of proj.waypoints) {
       if (wp.markerStyle === 'photo' && wp.photoUrl) {
-        const id = `photo:${wp.photoUrl}:${wp.color}`;
+        const id = `photo:${wp.photoUrl}:${wp.color}:${cropKey(wp.photoCrop)}`;
         if (!map.hasImage(id) && !pendingPhotoRef.current.has(id)) {
           pendingPhotoRef.current.add(id);
-          renderPhotoMarker(wp.photoUrl, wp.color).then((icon) => {
+          renderPhotoMarker(wp.photoUrl, wp.color, wp.photoCrop).then((icon) => {
             pendingPhotoRef.current.delete(id);
             const m = mapRef.current;
             if (!m || !styleReadyRef.current || m.hasImage(id)) return;
@@ -233,7 +234,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       let img = markerImageId(wp.markerStyle, wp.icon, wp.color);
       let anchor: 'bottom' | 'center' = wp.markerStyle === 'dot' || wp.markerStyle === 'label' ? 'center' : 'bottom';
       if (wp.markerStyle === 'photo' && wp.photoUrl) {
-        const pid = `photo:${wp.photoUrl}:${wp.color}`;
+        const pid = `photo:${wp.photoUrl}:${wp.color}:${cropKey(wp.photoCrop)}`;
         img = map.hasImage(pid) ? pid : markerImageId('pin', wp.icon, wp.color);
       }
       let pop = 1;
