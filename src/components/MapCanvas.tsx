@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, MapMouseEvent, StyleSpecification } from 'maplibre-gl';
 import * as THREE from 'three';
-import type { CameraShot, EditTool, RouteProject, TransportMode, VehicleTelemetry } from '../types';
+import type { CameraShot, EditTool, RouteProject, RouteSegment, TransportMode, VehicleTelemetry } from '../types';
 import { create3DVehicle, type Vehicle3DInstance } from '../services/threeVehicles';
 import { FLYING_MODES, WATER_MODES, interpolateRouteState, sampleAtDistance, type RouteModel } from '../services/geoUtils';
 import { computeCameraPose, type CameraPose } from '../services/cameraDirector';
@@ -100,6 +100,9 @@ const LYR = {
 
 const emptyFC = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] });
 
+/** Colour the vehicle of a leg is painted in. */
+const vehicleColorOf = (seg: RouteSegment) => seg.vehicleColor || seg.color;
+
 /** Initial great-circle bearing (degrees clockwise from north) from a to b. */
 function bearingBetween(a: { lng: number; lat: number }, b: { lng: number; lat: number }): number {
   const r = Math.PI / 180;
@@ -169,7 +172,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
   // Three.js
   const threeRef = useRef<{ scene: THREE.Scene; camera: THREE.Camera; renderer: THREE.WebGLRenderer; spriteScene: THREE.Scene; spriteMesh: THREE.Mesh } | null>(null);
   const vehicleRef = useRef<Vehicle3DInstance | null>(null);
-  const vehicleModeRef = useRef<TransportMode | null>(null);
+  const vehicleModeRef = useRef<string | null>(null);
   const vehicleLengthRef = useRef(1);
   const vehicleTfRef = useRef({ lng: 0, lat: 0, alt: 0, bearing: 0, pitch: 0, roll: 0, scale: 1, visible: false });
   const lastFrameTimeRef = useRef<number | null>(null);
@@ -688,12 +691,14 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
     const tel = interpolateRouteState(proj, modelRef.current, time);
     const seg = proj.segments[tel.currentSegmentIndex] || proj.segments[0];
     const mode = seg?.transportMode || 'sports_car';
-    if (vehicleModeRef.current !== mode || !vehicleRef.current) {
+    const paint = seg ? vehicleColorOf(seg) : '#e63946';
+    const modelKey = `${mode}|${paint}`;
+    if (vehicleModeRef.current !== modelKey || !vehicleRef.current) {
       if (vehicleRef.current) {
         three.scene.remove(vehicleRef.current.group);
         vehicleRef.current.dispose();
       }
-      const inst = create3DVehicle(mode);
+      const inst = create3DVehicle(mode, parseInt(paint.replace('#', '').slice(0, 6), 16));
       // The procedural models use shiny PBR materials; without an environment map those render almost black.
       inst.group.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
@@ -713,7 +718,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       box.getSize(size);
       vehicleLengthRef.current = Math.max(1, Math.max(size.x, size.z));
       vehicleRef.current = inst;
-      vehicleModeRef.current = mode;
+      vehicleModeRef.current = modelKey;
     }
   };
 
@@ -913,7 +918,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
         alt: ground,
         bearing: heading,
         sizeM: metersPerPixel(tel.lat, zoom) * 64 * 0.9 * proj.vehicleScale,
-        key: spriteTexture(seg.transportMode, seg.color),
+        key: spriteTexture(seg.transportMode, vehicleColorOf(seg)),
         visible: true,
       };
     } else {
@@ -1324,7 +1329,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = (props) => {
       map.setPaintProperty(LYR.upcomingCasing, 'line-width', ['+', ['*', ['get', 'width'], ls], 3]);
     }
     // build every leg's flat symbol now, not mid-playback when the leg starts
-    for (const sg of project.segments) spriteTexture(sg.transportMode, sg.color);
+    for (const sg of project.segments) spriteTexture(sg.transportMode, vehicleColorOf(sg));
     vehicleModeRef.current = null; // re-evaluate the model (transport mode may have changed)
     sentRef.current.doneKey = '';
     sentRef.current.markers = '';

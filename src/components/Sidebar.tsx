@@ -10,6 +10,9 @@ import { FLYING_MODES, rebuildSegment, reconnectLegs, timelineLayout, type Route
 
 export type SidebarTab = 'route' | 'markers' | 'camera' | 'style';
 
+/** Vehicle paints: classic car colours first, then brights. */
+const VEHICLE_COLORS = ['#ffffff', '#c0c7d1', '#1f2937', '#dc2626', '#f97316', '#facc15', '#16a34a', '#0ea5e9', '#2563eb', '#7c3aed', '#ec4899', '#92400e'];
+
 interface SidebarProps {
   project: RouteProject;
   model: RouteModel;
@@ -151,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                   const range = layout.segments.find((x) => x.index === idx);
                   return (
                     <div key={s.id} onClick={() => onSelectSegment(idx)} className={`rounded-xl border p-2.5 cursor-pointer transition-colors flex items-center gap-2.5 ${active ? 'border-rose-400/60 bg-rose-500/10' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
-                      <span className="w-8 h-8 rounded-lg flex items-center justify-center text-lg shrink-0" style={{ background: s.color + '33', boxShadow: `inset 0 0 0 1.5px ${s.color}` }}>
+                      <span className="w-8 h-8 rounded-lg flex items-center justify-center text-lg shrink-0" style={{ background: (s.vehicleColor || s.color) + '33', boxShadow: `inset 0 0 0 1.5px ${s.color}` }}>
                         {t?.glyph}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -228,6 +231,36 @@ export const Sidebar: React.FC<SidebarProps> = (p) => {
                         <span className="text-[9px] leading-tight truncate w-full text-center">{o.label}</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label">Vehicle colour</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, vehicleColor: undefined }), false)}
+                      className={`chip ${!seg.vehicleColor ? 'chip-on' : ''}`}
+                      title="Paint the vehicle in the line colour"
+                    >
+                      Same as line
+                    </button>
+                    <input
+                      type="color"
+                      value={seg.vehicleColor || seg.color}
+                      onChange={(e) => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, vehicleColor: e.target.value }), false)}
+                      title="Pick any colour"
+                    />
+                    <div className="flex gap-1 flex-wrap">
+                      {VEHICLE_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => onUpdateSegment(activeSegmentIndex, (s) => ({ ...s, vehicleColor: c }), false)}
+                          className={`w-4 h-4 rounded-full border ${seg.vehicleColor === c ? 'border-white ring-2 ring-rose-400/70' : 'border-white/25'}`}
+                          style={{ background: c }}
+                          title={c}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 

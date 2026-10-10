@@ -34,6 +34,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           <li>At the airport, pick <b>Plane</b> in the <b>Travelling by</b> menu. The next points you click start a new leg from the airport, and the line becomes a flight arc.</li>
           <li>At the destination pick <b>Car</b> again for the taxi, then <b>Train</b>, and keep clicking.</li>
         </ol>
+        <p>Each leg can also have its own <b>Vehicle colour</b> in the Route tab: the same as the line, or any colour for the car, plane, boat or other symbol.</p>
         <p>Forgot a change? Click the point where it happens and choose <b>Change transport from here</b>: the leg is split there. A badge with the vehicle appears on the line at the start of every leg while you edit, and the timeline shows one coloured block per leg.</p>
         <p><b>Change the order</b> of the trip with the arrows on a selected leg in the Route tab: each leg is "travel to its destination", so moving the leg to C above the leg to B turns A → B → C into A → C → B, and the route reconnects on the map. Deleting a leg skips that stop the same way.</p>
         <p>In the video, the line <b>pauses at every transport change</b> while the camera glides to that transport's zoom (set under Camera → Zoom per transport) and the symbol swaps. Add a marker there if you also want a sign or a story card.</p>

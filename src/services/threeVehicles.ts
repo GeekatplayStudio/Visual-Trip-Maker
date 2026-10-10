@@ -94,7 +94,9 @@ export class VehicleParticleSystem {
 // Procedural 3D Vehicle Factory
 // -------------------------------------------------------------
 
-export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
+/** `paint` (0xRRGGBB) recolours the model's main body; omitted = the model's own colours. */
+export function create3DVehicle(mode: TransportMode, paint?: number): Vehicle3DInstance {
+  const tint = (own: number) => paint ?? own;
   const rootGroup = new THREE.Group();
   const animatedParts: (() => void)[] = [];
   const disposables: (THREE.BufferGeometry | THREE.Material)[] = [];
@@ -137,7 +139,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
       particleSystem = new VehicleParticleSystem(0xffffff, 0.6, 2.5);
       rootGroup.add(particleSystem.group);
 
-      const bodyMat = createPBR(0xffffff, 0.2, 0.4);
+      const bodyMat = createPBR(tint(0xffffff), 0.2, 0.4);
       const accentMat = createPBR(0x0284c7, 0.3, 0.6); // Cyan airline stripe
       const glassMat = createPBR(0x0f172a, 0.1, 0.9); // Cockpit glass
       const metalMat = createPBR(0x94a3b8, 0.4, 0.8);
@@ -271,7 +273,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
       particleSystem = new VehicleParticleSystem(0x64748b, 0.4, 1.8);
       rootGroup.add(particleSystem.group);
 
-      const carPaintMat = createPBR(0xef4444, 0.15, 0.8); // Rosso Corsa Red
+      const carPaintMat = createPBR(tint(0xef4444), 0.15, 0.8); // Rosso Corsa Red
       const chassisMat = createPBR(0x0f172a, 0.5, 0.2); // Carbon dark
       const windowMat = createPBR(0x1e293b, 0.1, 0.95);
       const wheelMat = createPBR(0x18181b, 0.7, 0.3);
@@ -386,7 +388,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
       particleSystem = new VehicleParticleSystem(0xd97706, 0.35, 2.0); // Desert trail dust
       rootGroup.add(particleSystem.group);
 
-      const bodyColor = mode === 'camper' ? 0x0284c7 : 0xeab308; // Safari Gold or Camper Blue
+      const bodyColor = tint(mode === 'camper' ? 0x0284c7 : 0xeab308); // Safari Gold or Camper Blue
       const bodyMat = createPBR(bodyColor, 0.3, 0.4);
       const trimMat = createPBR(0x18181b, 0.8, 0.2);
       const windowMat = createPBR(0x0f172a, 0.1, 0.9);
@@ -445,7 +447,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     // 4. HIGH-SPEED BULLET TRAIN (SHINKANSEN / TGV)
     // -----------------------------------------------------------
     case 'bullet_train': {
-      const trainWhite = createPBR(0xf8fafc, 0.2, 0.5);
+      const trainWhite = createPBR(tint(0xf8fafc), 0.2, 0.5);
       const stripeBlue = createPBR(0x2563eb, 0.2, 0.6);
       const glassMat = createPBR(0x0f172a, 0.1, 0.95);
       const undercarriageMat = createPBR(0x334155, 0.7, 0.3);
@@ -529,7 +531,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
 
       const ironMat = createPBR(0x18181b, 0.6, 0.7);
       const brassMat = createPBR(0xd97706, 0.2, 0.9);
-      const redMat = createPBR(0xdc2626, 0.4, 0.4);
+      const redMat = createPBR(tint(0xdc2626), 0.4, 0.4);
 
       // Cylindrical Boiler
       const boilerGeom = trackGeom(new THREE.CylinderGeometry(4.2, 4.2, 22, 16));
@@ -583,7 +585,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     // 6. MOTORCYCLE / ADVENTURE BIKE
     // -----------------------------------------------------------
     case 'motorcycle': {
-      const bikePaintMat = createPBR(0xf97316, 0.2, 0.7); // Vivid Orange
+      const bikePaintMat = createPBR(tint(0xf97316), 0.2, 0.7); // Vivid Orange
       const metalMat = createPBR(0x64748b, 0.3, 0.8);
       const tireMat = createPBR(0x0f172a, 0.8, 0.2);
       const headlightMat = createEmissive(0x38bdf8, 0xffffff, 4);
@@ -650,7 +652,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
       particleSystem = new VehicleParticleSystem(0xe0f2fe, 0.6, 3.0); // Expanding water wake foam
       rootGroup.add(particleSystem.group);
 
-      const hullMat = createPBR(0x0f172a, 0.2, 0.6); // Midnight Navy Hull
+      const hullMat = createPBR(tint(0x0f172a), 0.2, 0.6); // Midnight Navy Hull
       const deckMat = createPBR(0xd97706, 0.6, 0.2); // Teak wood deck
       const superMat = createPBR(0xffffff, 0.1, 0.3); // Brilliant white superstructure
       const glassMat = createPBR(0x38bdf8, 0.1, 0.95);
@@ -711,7 +713,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     case 'hiker':
     case 'bicycle': {
       const skinMat = createPBR(0xfcd34d, 0.6, 0.1);
-      const jacketMat = createPBR(0xef4444, 0.5, 0.2); // Vibrant red jacket
+      const jacketMat = createPBR(tint(0xef4444), 0.5, 0.2); // Vibrant red jacket
       const pantsMat = createPBR(0x1e3a8a, 0.5, 0.2); // Blue hiking pants
       const backpackMat = createPBR(0x065f46, 0.6, 0.2); // Forest green backpack
       const hatMat = createPBR(0xd97706, 0.6, 0.1); // Explorer sunhat
@@ -782,7 +784,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     // 9. HELICOPTER
     // -----------------------------------------------------------
     case 'helicopter': {
-      const heliPaintMat = createPBR(0x0284c7, 0.2, 0.7); // Electric Blue
+      const heliPaintMat = createPBR(tint(0x0284c7), 0.2, 0.7); // Electric Blue
       const glassMat = createPBR(0x0f172a, 0.1, 0.95);
       const bladeMat = createPBR(0x1e293b, 0.4, 0.8);
       const metalMat = createPBR(0x94a3b8, 0.3, 0.8);
@@ -854,7 +856,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
     // 10. HOT AIR BALLOON
     // -----------------------------------------------------------
     case 'balloon': {
-      const redMat = createPBR(0xef4444, 0.4, 0.1);
+      const redMat = createPBR(tint(0xef4444), 0.4, 0.1);
       const yellowMat = createPBR(0xfacc15, 0.4, 0.1);
       const basketMat = createPBR(0xb45309, 0.8, 0.1);
       const flameMat = createEmissive(0xf97316, 0xffedd5, 5);
@@ -898,7 +900,7 @@ export function create3DVehicle(mode: TransportMode): Vehicle3DInstance {
       particleSystem = new VehicleParticleSystem(0xffffff, 0.5, 2.0);
       rootGroup.add(particleSystem.group);
 
-      const yellowMat = createPBR(0xf59e0b, 0.2, 0.5); // Vintage Aviator Yellow
+      const yellowMat = createPBR(tint(0xf59e0b), 0.2, 0.5); // Vintage Aviator Yellow
       const glassMat = createPBR(0x0f172a, 0.1, 0.9);
       const propMat = createPBR(0x18181b, 0.4, 0.8);
 

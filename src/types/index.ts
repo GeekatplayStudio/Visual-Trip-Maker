@@ -124,6 +124,8 @@ export interface RouteSegment {
   roadSnapped?: boolean;
   lengthKm: number;
   color: string;
+  /** Colour of the vehicle symbol / 3D model body. Unset = same as the line. */
+  vehicleColor?: string;
   lineWidth: number;
   lineStyle: LineStyle;
   glow: boolean;
