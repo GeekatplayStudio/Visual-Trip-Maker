@@ -36,8 +36,8 @@ By **Geekatplay Studio** · Vladimir Chopine
 | **Map styles, terrain and symbols.** | **Vertical 9:16** for Reels, Shorts and TikTok. |
 | ![Export](docs/screenshots/08-export.jpg) | ![Flight arc](docs/screenshots/10-flight-arc.jpg) |
 | **Export** up to 4K, with optional sound. | **Shortest flight path** across the Pacific. |
-| ![Photo and description](docs/screenshots/11-photo-description.jpg) | |
-| **Photos and descriptions.** Upload and frame a photo; suggest a short description of the place in one click. | |
+| ![Photo and description](docs/screenshots/11-photo-description.jpg) | ![Vehicle colour](docs/screenshots/12-vehicle-colour.jpg) |
+| **Photos and descriptions.** Upload and frame a photo; suggest a short description of the place in one click. | **Vehicle colour** per leg, and each leg shown as *from → to*. |
 
 ## Quick start
 
